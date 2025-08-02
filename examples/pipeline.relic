@@ -1,0 +1,20 @@
+// Example demonstrating the pipeline operator |>
+
+value ProcessedText(raw: String) {
+    // Pipeline operator chains transformations
+    validate: raw |> toLowerCase |> trim |> length > 0
+    
+    // Normalize using pipeline
+    normalize: raw |> trim |> toLowerCase
+}
+
+value SafeUrl(url: String) {
+    // Complex validation using pipelines
+    validate: url |> toLowerCase |> startsWith("https://") && url |> length > 10
+}
+
+// Future syntax (when functions are implemented):
+// value FormattedNumber(num: Int) {
+//     validate: num |> abs |> isPositive
+//     normalize: num |> abs |> formatWithCommas
+// }

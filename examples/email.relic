@@ -1,0 +1,9 @@
+value EmailAddress(raw: String) {
+    validate: raw contains "@" && raw.length > 3
+    normalize: raw.toLowerCase()
+}
+
+value CustomerId(id: Int) {
+    validate: id > 0
+    unique: true
+}
