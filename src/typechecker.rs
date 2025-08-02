@@ -243,6 +243,73 @@ impl TypeChecker {
                 // Check the body with the extended environment
                 extended_checker.check_expression(body)
             }
+            
+            Expression::Match(expr, arms) => {
+                let expr_type = self.check_expression(expr)?;
+                
+                // Check that we're matching on a value type
+                let value_name = match &expr_type {
+                    Type::Value(name) => name,
+                    _ => return Err(Error::Type(TypeError {
+                        message: format!("Can only match on value types, found {:?}", expr_type),
+                    })),
+                };
+                
+                // Get the value type definition
+                let value_type = self.env.get_value(value_name).ok_or_else(|| {
+                    Error::Type(TypeError {
+                        message: format!("Unknown value type: {}", value_name),
+                    })
+                })?;
+                
+                // All arms must have the same result type
+                let mut result_type = None;
+                
+                for arm in arms {
+                    match &arm.pattern {
+                        Pattern::Constructor(constructor, binding) => {
+                            // Check that the constructor matches the value type
+                            if constructor != value_name {
+                                return Err(Error::Type(TypeError {
+                                    message: format!(
+                                        "Pattern constructor '{}' doesn't match value type '{}'",
+                                        constructor, value_name
+                                    ),
+                                }));
+                            }
+                            
+                            // Create environment with pattern binding
+                            let mut extended_checker = TypeChecker {
+                                env: self.env.clone(),
+                                locals: self.locals.clone(),
+                            };
+                            extended_checker.locals.insert(binding.clone(), value_type.parameter_type.clone());
+                            
+                            // Check arm body
+                            let arm_type = extended_checker.check_expression(&arm.body)?;
+                            
+                            // Ensure all arms have the same type
+                            match &result_type {
+                                None => result_type = Some(arm_type),
+                                Some(expected) => {
+                                    if arm_type != *expected {
+                                        return Err(Error::Type(TypeError {
+                                            message: format!(
+                                                "Match arms have different types: {:?} and {:?}",
+                                                expected, arm_type
+                                            ),
+                                        }));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                result_type.ok_or_else(|| Error::Type(TypeError {
+                    message: "Match expression has no arms".to_string(),
+                }))
+            }
         }
     }
 

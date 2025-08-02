@@ -12,6 +12,8 @@ pub enum Token {
     Contains,
     Let,
     In,
+    Match,
+    Arrow,
 
     // Identifiers and literals
     Identifier(String),
@@ -141,6 +143,9 @@ impl Lexer {
                     if self.current_char == Some('=') {
                         self.advance();
                         Ok(Token::Equal)
+                    } else if self.current_char == Some('>') {
+                        self.advance();
+                        Ok(Token::Arrow)
                     } else {
                         Ok(Token::Assign)
                     }
@@ -262,6 +267,7 @@ impl Lexer {
             "contains" => Token::Contains,
             "let" => Token::Let,
             "in" => Token::In,
+            "match" => Token::Match,
             _ => Token::Identifier(identifier.to_string()),
         };
 
@@ -381,6 +387,36 @@ mod tests {
         );
         assert_eq!(lexer.next_token().unwrap(), Token::Plus);
         assert_eq!(lexer.next_token().unwrap(), Token::Integer(1));
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_match_keywords() {
+        let mut lexer = Lexer::new("match x { Status(c) => c > 0 }".to_string());
+        assert_eq!(lexer.next_token().unwrap(), Token::Match);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::Identifier("x".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::LeftBrace);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::Identifier("Status".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::LeftParen);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::Identifier("c".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::RightParen);
+        assert_eq!(lexer.next_token().unwrap(), Token::Arrow);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::Identifier("c".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Greater);
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(0));
+        assert_eq!(lexer.next_token().unwrap(), Token::RightBrace);
         assert_eq!(lexer.next_token().unwrap(), Token::Eof);
     }
 }

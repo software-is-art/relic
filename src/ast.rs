@@ -41,6 +41,18 @@ pub enum Expression {
     Comparison(ComparisonOp, Box<Expression>, Box<Expression>),
     Pipeline(Box<Expression>, Box<Expression>),
     Let(String, Box<Expression>, Box<Expression>), // let name = value in body
+    Match(Box<Expression>, Vec<MatchArm>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    pub body: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Constructor(String, String), // ValueType(binding)
 }
 
 #[derive(Debug, Clone, PartialEq)]

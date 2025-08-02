@@ -89,14 +89,17 @@ Relic currently supports:
 - **Arithmetic**: `+`, `-`, `*`, `/`
 - **Member Access**: `object.property`
 - **Method Calls**: `object.method(args)`
+- **Pipeline**: `expr |> expr` - Functional composition
+- **Let-bindings**: `let name = expr in body` - Local bindings
+- **Pattern Matching**: `match expr { Pattern(binding) => result }` - Destructuring
 
 ## Examples
 
 See the `examples/` directory for more examples:
 - `email.relic`: Value type definitions
-- `test_parser.rs`: Parser testing
-- `test_typechecker.rs`: Type checker testing
-- `full_pipeline.rs`: Complete compilation pipeline
+- `pipeline.relic`: Pipeline operator usage
+- `let_bindings.relic`: Let-binding examples
+- `pattern_matching.relic`: Pattern matching syntax (planned feature)
 
 ## Architecture
 

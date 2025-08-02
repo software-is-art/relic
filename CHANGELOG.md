@@ -33,10 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive test suite for pipeline functionality
   - Example file demonstrating pipeline usage (`examples/pipeline.relic`)
 
+- **Pattern Matching** (February 2025)
+  - Lexer support for `match` keyword and `=>` arrow operator
+  - AST representation with `Match` expressions, `MatchArm`, and `Pattern` types
+  - Parser implementation for match expressions with constructor patterns
+  - Type checker ensures patterns match value types and all arms return same type
+  - Pattern variables properly bound in arm scopes
+  - Test suite for pattern matching functionality
+  - Example file showing pattern matching syntax (`examples/pattern_matching.relic`)
+
 ### Changed
 - Updated parser to support functional composition via pipelines
 - Enhanced expression evaluation to handle chained transformations
 - Improved REPL to support file processing mode
+- Extended AST to support match expressions and patterns
+- Type checker now handles pattern matching with proper scoping
 
 ### Examples
 ```relic
@@ -50,6 +61,13 @@ value Temperature(celsius: Int) {
 value ProcessedText(raw: String) {
     validate: raw |> toLowerCase |> trim |> length > 0
     normalize: raw |> trim |> toLowerCase
+}
+
+// Pattern matching for value deconstruction
+value Result(status: Status) {
+    validate: match status {
+        Status(code) => code == 200 || (code >= 400 && code < 500)
+    }
 }
 ```
 
@@ -102,12 +120,14 @@ value CustomerId(id: Int) {
 ```
 
 ### Known Limitations
-- Pattern matching not yet implemented
+- Pattern matching currently limited to validation expressions (not yet in standalone expressions)
+- Value type equality and structural hashing not yet implemented
 - Uniqueness constraints parsed but not enforced
 - Multiple dispatch system not yet implemented
 - No relational features yet
 - Pipeline operator currently limited (no proper function application on right side)
 - No support for multi-line comments (only `//` line comments)
+- Function definitions not yet implemented
 
 ### Internal
 - Project structure following Rust best practices

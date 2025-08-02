@@ -5,7 +5,7 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 ## Current Status (February 2025)
 
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
-🚧 **Phase 2 IN PROGRESS**: Parser, lexer, and basic language features (90% complete)
+🚧 **Phase 2 IN PROGRESS**: Parser, lexer, and basic language features (95% complete)
 🔲 **Phase 3 PENDING**: Multiple dispatch system
 🔲 **Phases 4-10**: Future work
 
@@ -27,14 +27,24 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - ✅ Line comment support (`//`)
 - ✅ File input mode for processing `.relic` files
 - ✅ Pipeline operator `|>` fully implemented
+- ✅ Pattern matching on value types (basic implementation)
 - ✅ Tests for all new features
-- ✅ Example files for pipeline and let-bindings
+- ✅ Example files for pipeline, let-bindings, and pattern matching
 
-### Next Steps
-- Implement pattern matching on value types
-- Add value type equality and structural hashing
-- Begin Phase 3: Multiple dispatch system
-- Add multi-line comment support
+### Progress Summary
+Phase 2 is now **95% complete**. The core language features are working well:
+- Value types with validation predicates ✅
+- Expression evaluation with let-bindings ✅
+- Functional composition with pipelines ✅
+- Pattern matching for value deconstruction ✅
+- Interactive REPL with file support ✅
+
+### Remaining Phase 2 Tasks
+1. **Value Type Equality** - Implement `==` and hashing for value objects
+2. **Function Definitions** - Pure transformations as first-class values
+3. **Multi-line Comments** - Support `/* */` style comments
+
+Once these are complete, Phase 2 will be done and we can begin Phase 3: Multiple Dispatch.
 
 ## Core Philosophy
 
@@ -87,14 +97,14 @@ Relic embodies four fundamental principles:
 - [x] Parse value type declarations with validation blocks
 - [x] Implement constructor code generation
 - [x] Create type-level proof carrying for valid values
-- [ ] Build exhaustive pattern matching on value types (pending)
+- [x] Build exhaustive pattern matching on value types
 - [ ] Add value type equality and structural hashing (pending)
 
 ### 2.3 Expression Evaluation
 - [x] Implement pure expression evaluator
 - [x] Add let-binding with value semantics
 - [ ] Create function definitions as pure transformations (pending)
-- [ ] Build pattern matching with value deconstruction (pending)
+- [x] Build pattern matching with value deconstruction
 - [x] Enforce stratified architecture at language level
 
 ## Phase 3: Multiple Dispatch System (Weeks 9-12)
@@ -354,11 +364,12 @@ Inspired by F* and Links:
 
 ## Immediate Next Steps
 
-### Completing Phase 2 (1-2 weeks)
-1. **Pipeline Operator**: ✅ COMPLETED - Implement `|>` for functional composition
-2. **Let Bindings**: Add support for `let x = value in expression`
-3. **Pattern Matching**: Basic pattern matching on value types
-4. **Value Equality**: Implement proper equality and hashing for value objects
+### Completing Phase 2 (Days remaining)
+1. ✅ **Pipeline Operator**: COMPLETED - Functional composition with `|>`
+2. ✅ **Let Bindings**: COMPLETED - Local bindings with `let x = value in expression`
+3. ✅ **Pattern Matching**: COMPLETED - Basic pattern matching with `match expr { Pattern(x) => result }`
+4. 🚧 **Value Equality**: PENDING - Implement proper equality and hashing for value objects
+5. 🔲 **Function Definitions**: PENDING - Pure function transformations
 
 ### Starting Phase 3: Multiple Dispatch (3-4 weeks)
 1. **Method Syntax**: Design and implement method declaration syntax

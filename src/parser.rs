@@ -295,6 +295,24 @@ impl Parser {
                 let body = self.parse_expression()?;
                 Ok(Expression::Let(name, Box::new(value), Box::new(body)))
             }
+            Token::Match => {
+                self.advance()?;
+                let expr = self.parse_expression()?;
+                self.expect(Token::LeftBrace)?;
+                
+                let mut arms = Vec::new();
+                while self.current_token != Token::RightBrace && self.current_token != Token::Eof {
+                    arms.push(self.parse_match_arm()?);
+                    
+                    // Optional comma between arms
+                    if self.current_token == Token::Comma {
+                        self.advance()?;
+                    }
+                }
+                
+                self.expect(Token::RightBrace)?;
+                Ok(Expression::Match(Box::new(expr), arms))
+            }
             Token::String(s) => {
                 self.advance()?;
                 Ok(Expression::Literal(Literal::String(s.clone())))
@@ -327,6 +345,23 @@ impl Parser {
                 column: self.column,
             })),
         }
+    }
+
+    fn parse_match_arm(&mut self) -> Result<MatchArm> {
+        // Parse pattern: ValueType(binding)
+        let constructor = self.expect_identifier()?;
+        self.expect(Token::LeftParen)?;
+        let binding = self.expect_identifier()?;
+        self.expect(Token::RightParen)?;
+        
+        self.expect(Token::Arrow)?;
+        
+        let body = self.parse_expression()?;
+        
+        Ok(MatchArm {
+            pattern: Pattern::Constructor(constructor, binding),
+            body,
+        })
     }
 
     fn parse_boolean(&mut self) -> Result<bool> {
@@ -559,6 +594,63 @@ mod tests {
                         }
                     }
                     _ => panic!("Expected let expression"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_match_expression() {
+        let input = "value Process(status: Status) {
+            validate: match status {
+                Status(code) => code == 200
+            }
+        }";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer).unwrap();
+        let program = parser.parse_program().unwrap();
+
+        assert_eq!(program.declarations.len(), 1);
+        match &program.declarations[0] {
+            Declaration::Value(v) => {
+                assert_eq!(v.name, "Process");
+                assert!(v.body.validate.is_some());
+                
+                // Check that the validation expression contains a match
+                match v.body.validate.as_ref().unwrap() {
+                    Expression::Match(expr, arms) => {
+                        // Check the matched expression
+                        match expr.as_ref() {
+                            Expression::Identifier(name) => assert_eq!(name, "status"),
+                            _ => panic!("Expected identifier in match expression"),
+                        }
+                        
+                        // Check we have one arm
+                        assert_eq!(arms.len(), 1);
+                        
+                        // Check the pattern
+                        match &arms[0].pattern {
+                            Pattern::Constructor(name, binding) => {
+                                assert_eq!(name, "Status");
+                                assert_eq!(binding, "code");
+                            }
+                        }
+                        
+                        // Check the arm body
+                        match &arms[0].body {
+                            Expression::Comparison(ComparisonOp::Equal, left, right) => {
+                                match (left.as_ref(), right.as_ref()) {
+                                    (Expression::Identifier(id), Expression::Literal(Literal::Integer(200))) => {
+                                        assert_eq!(id, "code");
+                                    }
+                                    _ => panic!("Unexpected comparison in match arm"),
+                                }
+                            }
+                            _ => panic!("Expected comparison in match arm body"),
+                        }
+                    }
+                    _ => panic!("Expected match expression, got: {:?}", v.body.validate),
                 }
             }
         }

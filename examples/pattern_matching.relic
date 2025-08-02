@@ -1,0 +1,20 @@
+// Example demonstrating pattern matching in Relic
+
+// Basic value type for demonstration
+value Status(code: Int) {
+    validate: code >= 0 && code < 1000
+}
+
+// Example using match expressions (syntax demonstration)
+// Note: Match expressions are not yet supported in validation predicates
+// This shows the planned syntax for pattern matching:
+//
+// match status {
+//     Status(c) => c == 200,
+//     Status(c) => c >= 400 && c < 500
+// }
+//
+// Pattern matching will enable:
+// - Destructuring value types to access wrapped data
+// - Exhaustive checking of patterns
+// - Multiple dispatch integration
