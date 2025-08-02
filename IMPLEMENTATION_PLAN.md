@@ -2,10 +2,10 @@
 
 This document outlines the implementation roadmap for Relic, a value-oriented programming language with functional-relational foundations as described in design.md.
 
-## Current Status (January 2025)
+## Current Status (February 2025)
 
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
-🚧 **Phase 2 IN PROGRESS**: Parser, lexer, and basic language features (80% complete)
+🚧 **Phase 2 IN PROGRESS**: Parser, lexer, and basic language features (90% complete)
 🔲 **Phase 3 PENDING**: Multiple dispatch system
 🔲 **Phases 4-10**: Future work
 
@@ -15,19 +15,26 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - Compiler that generates value constructors from AST
 - Interactive REPL with full pipeline (parse → typecheck → compile → execute)
 - Pipeline operator `|>` for functional composition
-- Example: EmailAddress and CustomerId value types with validation
-- Test suite with lexer and parser tests
+- Let-bindings for intermediate calculations in validation predicates
+- Line comments with `//` syntax
+- File input support via command-line arguments
+- Example files demonstrating all features
+- Comprehensive test suite
 
-### Recent Additions (January 2025)
+### Recent Additions (February 2025)
+- ✅ Let-bindings (`let x = expr in body`) fully implemented
+- ✅ Support for nested let-bindings
+- ✅ Line comment support (`//`)
+- ✅ File input mode for processing `.relic` files
 - ✅ Pipeline operator `|>` fully implemented
-- ✅ Tests for pipeline operator in lexer and parser
-- ✅ Example file demonstrating pipeline usage
+- ✅ Tests for all new features
+- ✅ Example files for pipeline and let-bindings
 
 ### Next Steps
-- Add let-bindings support
 - Implement pattern matching on value types
 - Add value type equality and structural hashing
 - Begin Phase 3: Multiple dispatch system
+- Add multi-line comment support
 
 ## Core Philosophy
 
@@ -85,7 +92,7 @@ Relic embodies four fundamental principles:
 
 ### 2.3 Expression Evaluation
 - [x] Implement pure expression evaluator
-- [ ] Add let-binding with value semantics (pending)
+- [x] Add let-binding with value semantics
 - [ ] Create function definitions as pure transformations (pending)
 - [ ] Build pattern matching with value deconstruction (pending)
 - [x] Enforce stratified architecture at language level
