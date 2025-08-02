@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Let Bindings**
+  - Full lexer support for `let` and `in` keywords
+  - Parser implementation for let-binding expressions
+  - Type checker support with proper scoping rules
+  - Compiler support for evaluating let-bindings in validation predicates
+  - Support for nested let-bindings
+  - Comprehensive test suite for let-binding functionality
+  - Example file demonstrating let-binding usage (`examples/let_bindings.relic`)
+
+- **Comment Support**
+  - Line comments using `//` syntax
+  - Comments are properly skipped during lexical analysis
+
+- **File Input Support**
+  - Command-line argument support for processing `.relic` files
+  - Example: `cargo run examples/file.relic`
+
 - **Pipeline Operator `|>`**
   - Full lexer support for distinguishing `|>` from `||`
   - Parser implementation with correct precedence (lower than logical operators)
@@ -19,11 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated parser to support functional composition via pipelines
 - Enhanced expression evaluation to handle chained transformations
+- Improved REPL to support file processing mode
 
 ### Examples
 ```relic
+// Let bindings for intermediate calculations
+value Temperature(celsius: Int) {
+    validate: let fahrenheit = celsius * 9 / 5 + 32 in 
+              fahrenheit > -459 && fahrenheit < 1000
+}
+
+// Pipeline operator chains transformations
 value ProcessedText(raw: String) {
-    // Pipeline operator chains transformations
     validate: raw |> toLowerCase |> trim |> length > 0
     normalize: raw |> trim |> toLowerCase
 }
@@ -79,11 +103,11 @@ value CustomerId(id: Int) {
 
 ### Known Limitations
 - Pattern matching not yet implemented
-- Let bindings not yet implemented
 - Uniqueness constraints parsed but not enforced
 - Multiple dispatch system not yet implemented
 - No relational features yet
 - Pipeline operator currently limited (no proper function application on right side)
+- No support for multi-line comments (only `//` line comments)
 
 ### Internal
 - Project structure following Rust best practices

@@ -40,6 +40,7 @@ pub enum Expression {
     MethodCall(Box<Expression>, String, Vec<Expression>),
     Comparison(ComparisonOp, Box<Expression>, Box<Expression>),
     Pipeline(Box<Expression>, Box<Expression>),
+    Let(String, Box<Expression>, Box<Expression>), // let name = value in body
 }
 
 #[derive(Debug, Clone, PartialEq)]

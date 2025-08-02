@@ -10,6 +10,8 @@ pub enum Token {
     True,
     False,
     Contains,
+    Let,
+    In,
 
     // Identifiers and literals
     Identifier(String),
@@ -32,6 +34,9 @@ pub enum Token {
     Greater,
     LessEqual,
     GreaterEqual,
+    
+    // Assignment
+    Assign,
 
     // Logical operators
     And,
@@ -120,7 +125,16 @@ impl Lexer {
                 }
                 '/' => {
                     self.advance();
-                    Ok(Token::Slash)
+                    if self.current_char == Some('/') {
+                        // Line comment - skip to end of line
+                        self.advance();
+                        while self.current_char.is_some() && self.current_char != Some('\n') {
+                            self.advance();
+                        }
+                        self.next_token()
+                    } else {
+                        Ok(Token::Slash)
+                    }
                 }
                 '=' => {
                     self.advance();
@@ -128,11 +142,7 @@ impl Lexer {
                         self.advance();
                         Ok(Token::Equal)
                     } else {
-                        Err(Error::Lexer(LexerError {
-                            message: "Unexpected character '=', did you mean '=='?".to_string(),
-                            line: self.line,
-                            column: self.column,
-                        }))
+                        Ok(Token::Assign)
                     }
                 }
                 '!' => {
@@ -250,6 +260,8 @@ impl Lexer {
             "true" => Token::True,
             "false" => Token::False,
             "contains" => Token::Contains,
+            "let" => Token::Let,
+            "in" => Token::In,
             _ => Token::Identifier(identifier.to_string()),
         };
 
@@ -349,6 +361,26 @@ mod tests {
             lexer.next_token().unwrap(),
             Token::Identifier("c".to_string())
         );
+        assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+    }
+
+    #[test]
+    fn test_let_keywords() {
+        let mut lexer = Lexer::new("let x = 5 in x + 1".to_string());
+        assert_eq!(lexer.next_token().unwrap(), Token::Let);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::Identifier("x".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Assign);
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(5));
+        assert_eq!(lexer.next_token().unwrap(), Token::In);
+        assert_eq!(
+            lexer.next_token().unwrap(),
+            Token::Identifier("x".to_string())
+        );
+        assert_eq!(lexer.next_token().unwrap(), Token::Plus);
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(1));
         assert_eq!(lexer.next_token().unwrap(), Token::Eof);
     }
 }

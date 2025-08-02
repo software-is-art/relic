@@ -1,0 +1,22 @@
+// Example demonstrating let-bindings in Relic
+
+// Let-bindings allow you to create local variable bindings within expressions
+value Temperature(celsius: Int) {
+    validate: let fahrenheit = celsius * 9 / 5 + 32 in 
+              fahrenheit > -459 && fahrenheit < 1000
+}
+
+// You can use let-bindings to make complex validations more readable
+value Password(raw: String) {
+    validate: let len = raw.length in
+              let hasUpperCase = raw contains "A" || raw contains "B" || raw contains "C" in
+              let hasNumber = raw contains "0" || raw contains "1" || raw contains "2" in
+              len > 8 && hasUpperCase && hasNumber
+}
+
+// Let-bindings can be nested
+value Age(years: Int) {
+    validate: let months = years * 12 in
+              let days = months * 30 in
+              days > 0 && days < 40000
+}

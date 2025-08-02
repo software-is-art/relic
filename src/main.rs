@@ -1,5 +1,9 @@
 use relic::{compiler::Compiler, lexer::Lexer, parser::Parser, typechecker::TypeChecker};
-use std::io::{self, Write};
+use std::{
+    env,
+    fs,
+    io::{self, Write},
+};
 
 struct Repl {
     compiler: Compiler,
@@ -78,13 +82,35 @@ impl Repl {
 }
 
 fn main() {
-    println!("Relic Language REPL v0.1.0");
-    println!("Type 'exit' to quit");
-    println!("Type 'help' for commands\n");
+    let args: Vec<String> = env::args().collect();
 
-    let mut repl = Repl::new();
+    if args.len() > 1 {
+        // File mode
+        let filename = &args[1];
+        match fs::read_to_string(filename) {
+            Ok(contents) => {
+                let mut repl = Repl::new();
+                println!("Processing file: {}", filename);
+                
+                match repl.process_declaration(&contents) {
+                    Ok(output) => println!("{}", output),
+                    Err(e) => eprintln!("Error: {}", e),
+                }
+            }
+            Err(e) => {
+                eprintln!("Error reading file '{}': {}", filename, e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        // REPL mode
+        println!("Relic Language REPL v0.1.0");
+        println!("Type 'exit' to quit");
+        println!("Type 'help' for commands\n");
 
-    loop {
+        let mut repl = Repl::new();
+
+        loop {
         print!("relic> ");
         io::stdout().flush().unwrap();
 
@@ -123,5 +149,6 @@ fn main() {
                 }
             }
         }
+    }
     }
 }

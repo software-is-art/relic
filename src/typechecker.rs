@@ -229,6 +229,20 @@ impl TypeChecker {
                 // function types and proper application checking
                 self.check_expression(right)
             }
+
+            Expression::Let(name, value, body) => {
+                let value_type = self.check_expression(value)?;
+                
+                // Create a new type checker with extended locals
+                let mut extended_checker = TypeChecker {
+                    env: self.env.clone(),
+                    locals: self.locals.clone(),
+                };
+                extended_checker.locals.insert(name.clone(), value_type);
+                
+                // Check the body with the extended environment
+                extended_checker.check_expression(body)
+            }
         }
     }
 

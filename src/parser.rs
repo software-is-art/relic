@@ -286,6 +286,15 @@ impl Parser {
 
     fn parse_primary_expression(&mut self) -> Result<Expression> {
         match &self.current_token.clone() {
+            Token::Let => {
+                self.advance()?;
+                let name = self.expect_identifier()?;
+                self.expect(Token::Assign)?;
+                let value = self.parse_expression()?;
+                self.expect(Token::In)?;
+                let body = self.parse_expression()?;
+                Ok(Expression::Let(name, Box::new(value), Box::new(body)))
+            }
             Token::String(s) => {
                 self.advance()?;
                 Ok(Expression::Literal(Literal::String(s.clone())))
@@ -430,6 +439,126 @@ mod tests {
                         _ => panic!("Expected identifier at end of pipeline"),
                     },
                     _ => panic!("Expected pipeline expression"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_let_expression() {
+        let input = "value WithLet(x: Int) {
+            validate: let y = x + 10 in y > 20
+        }";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer).unwrap();
+        let program = parser.parse_program().unwrap();
+
+        assert_eq!(program.declarations.len(), 1);
+        match &program.declarations[0] {
+            Declaration::Value(v) => {
+                assert_eq!(v.name, "WithLet");
+                assert!(v.body.validate.is_some());
+
+                // Check that the validation expression contains a let
+                match v.body.validate.as_ref().unwrap() {
+                    Expression::Let(name, value, body) => {
+                        assert_eq!(name, "y");
+                        // Value should be x + 10
+                        assert!(matches!(value.as_ref(), Expression::Binary(BinaryOp::Add, _, _)));
+                        // Body should be y > 20
+                        assert!(matches!(body.as_ref(), Expression::Comparison(ComparisonOp::Greater, _, _)));
+                    }
+                    _ => panic!(
+                        "Expected let expression, got: {:?}",
+                        v.body.validate
+                    ),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_nested_let_bindings() {
+        let input = "value Temperature(celsius: Int) {
+            validate: let fahrenheit = celsius * 9 / 5 + 32 in 
+                      fahrenheit > -459 && fahrenheit < 1000
+        }";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer).unwrap();
+        let program = parser.parse_program().unwrap();
+
+        assert_eq!(program.declarations.len(), 1);
+        match &program.declarations[0] {
+            Declaration::Value(v) => {
+                assert_eq!(v.name, "Temperature");
+                assert!(v.body.validate.is_some());
+
+                // Check the let binding structure
+                match v.body.validate.as_ref().unwrap() {
+                    Expression::Let(name, value, body) => {
+                        assert_eq!(name, "fahrenheit");
+                        // Value should be a complex arithmetic expression
+                        assert!(matches!(value.as_ref(), Expression::Binary(BinaryOp::Add, _, _)));
+                        // Body should be an AND expression
+                        assert!(matches!(body.as_ref(), Expression::Binary(BinaryOp::And, _, _)));
+                    }
+                    _ => panic!("Expected let expression"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_let_bindings_with_string_operations() {
+        let input = "value Password(raw: String) {
+            validate: let len = raw.length in
+                      let hasUpperCase = raw contains \"A\" || raw contains \"B\" || raw contains \"C\" in
+                      let hasNumber = raw contains \"0\" || raw contains \"1\" || raw contains \"2\" in
+                      len > 8 && hasUpperCase && hasNumber
+        }";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer).unwrap();
+        let program = parser.parse_program().unwrap();
+
+        assert_eq!(program.declarations.len(), 1);
+        match &program.declarations[0] {
+            Declaration::Value(v) => {
+                assert_eq!(v.name, "Password");
+                assert!(v.body.validate.is_some());
+
+                // Check that it's a nested let expression
+                match v.body.validate.as_ref().unwrap() {
+                    Expression::Let(name1, value1, body1) => {
+                        assert_eq!(name1, "len");
+                        // value1 should be raw.length
+                        assert!(matches!(value1.as_ref(), Expression::MemberAccess(_, _)));
+                        
+                        // body1 should be another let
+                        match body1.as_ref() {
+                            Expression::Let(name2, value2, body2) => {
+                                assert_eq!(name2, "hasUpperCase");
+                                // value2 should be an OR expression
+                                assert!(matches!(value2.as_ref(), Expression::Binary(BinaryOp::Or, _, _)));
+                                
+                                // body2 should be yet another let
+                                match body2.as_ref() {
+                                    Expression::Let(name3, value3, body3) => {
+                                        assert_eq!(name3, "hasNumber");
+                                        // value3 should be an OR expression
+                                        assert!(matches!(value3.as_ref(), Expression::Binary(BinaryOp::Or, _, _)));
+                                        // body3 should be an AND expression
+                                        assert!(matches!(body3.as_ref(), Expression::Binary(BinaryOp::And, _, _)));
+                                    }
+                                    _ => panic!("Expected third let expression"),
+                                }
+                            }
+                            _ => panic!("Expected second let expression"),
+                        }
+                    }
+                    _ => panic!("Expected let expression"),
                 }
             }
         }
