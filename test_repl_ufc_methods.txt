@@ -1,0 +1,5 @@
+method double(x: Int) -> Int { x * 2 }
+method triple(x: Int) -> Int { x * 3 }
+5.double()
+7.double().triple()
+exit

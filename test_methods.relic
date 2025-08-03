@@ -1,0 +1,15 @@
+// Test method declarations
+
+// For now, use Int as a simple type since value types only support single parameters
+method add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+method add(x: String, y: String) -> String {
+    x  // For now, just return x since we don't have string concatenation
+}
+
+// Test the methods in a function
+fn test_dispatch() -> Int {
+    add(5, 10)
+}

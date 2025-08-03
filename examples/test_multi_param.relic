@@ -1,0 +1,4 @@
+// Test multi-parameter value declaration
+value Rectangle(width: Int, height: Int) {
+    validate: width > 0 && height > 0
+}

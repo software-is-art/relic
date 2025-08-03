@@ -1,0 +1,2 @@
+// Test just value declarations first
+value Point(x: Int, y: Int) {}

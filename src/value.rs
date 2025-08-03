@@ -1,4 +1,4 @@
-use crate::ast::{ValueDeclaration, FunctionDeclaration};
+use crate::ast::{ValueDeclaration, FunctionDeclaration, MethodDeclaration};
 use crate::error::{Error, Result, ValidationError};
 use std::any::Any;
 use std::collections::HashMap;
@@ -24,6 +24,7 @@ pub struct ValueConstructor {
 pub struct ValueRegistry {
     constructors: HashMap<String, ValueConstructor>,
     functions: HashMap<String, FunctionDeclaration>,
+    methods: HashMap<String, Vec<MethodDeclaration>>,
 }
 
 impl ValueRegistry {
@@ -31,6 +32,7 @@ impl ValueRegistry {
         Self {
             constructors: HashMap::new(),
             functions: HashMap::new(),
+            methods: HashMap::new(),
         }
     }
 
@@ -45,9 +47,19 @@ impl ValueRegistry {
     pub fn get_function(&self, name: &str) -> Option<&FunctionDeclaration> {
         self.functions.get(name)
     }
+    
+    pub fn register_method(&mut self, method_decl: MethodDeclaration) {
+        self.methods.entry(method_decl.name.clone())
+            .or_insert_with(Vec::new)
+            .push(method_decl);
+    }
+    
+    pub fn get_methods(&self, name: &str) -> Option<&Vec<MethodDeclaration>> {
+        self.methods.get(name)
+    }
 
     pub fn execute_function(&self, name: &str, args: Vec<Box<dyn Any + Send + Sync>>) -> Result<Box<dyn Any + Send + Sync>> {
-        let func = self.get_function(name).ok_or_else(|| {
+        let _func = self.get_function(name).ok_or_else(|| {
             Error::Validation(ValidationError {
                 message: format!("Unknown function: {}", name),
                 value_type: "function".to_string(),

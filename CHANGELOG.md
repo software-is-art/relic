@@ -5,14 +5,25 @@ All notable changes to the Relic programming language will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-02-08
+## [Unreleased] - Phase 3 In Progress
 
 ### Summary
-Phase 2 is now 97% complete with the addition of value type equality and hashing support. The language continues to mature with essential features for practical use.
+Phase 3 (Multiple Dispatch) is now ~40% complete with method declaration parsing implemented.
 
-## [Unreleased]
+### Added (Phase 3)
+- **Method Declarations**
+  - New `method` keyword for multiple dispatch
+  - Support for parameter guards with `where` clauses
+  - `Any` type for generic dispatch
+  - AST, parser, and type checker support
+  - Method storage in compiler registry
 
-### Added
+## [0.2.0] - 2025-02-10
+
+### Summary
+Phase 2 is now 100% COMPLETE! All planned features for basic language functionality have been implemented.
+
+### Added (Phase 2 - Completed)
 - **Let Bindings**
   - Full lexer support for `let` and `in` keywords
   - Parser implementation for let-binding expressions
@@ -47,7 +58,7 @@ Phase 2 is now 97% complete with the addition of value type equality and hashing
   - Test suite for pattern matching functionality
   - Example file showing pattern matching syntax (`examples/pattern_matching.relic`)
 
-- **Value Type Equality** (February 8, 2025)
+- **Value Type Equality**
   - Implemented equality (`==`) and inequality (`!=`) operators for validation expressions
   - Added `equals()` and `hash_value()` methods to `ValueObject` trait
   - Support for structural equality comparison of value objects
@@ -56,6 +67,23 @@ Phase 2 is now 97% complete with the addition of value type equality and hashing
   - Comprehensive test suite for equality and hashing
   - Example file demonstrating equality operators (`examples/value_equality.relic`)
   - Compiler support for all comparison operators (>, <, >=, <=, ==, !=)
+
+- **Function Definitions and Evaluation**
+  - Full support for function declarations with parameters and return types
+  - Function calls with argument evaluation
+  - Functions can call other functions
+  - Type checking for function parameters and return values
+  - Example files demonstrating function usage
+
+- **Uniform Function Call Syntax (UFC)**
+  - Support for `x.f(y)` as syntactic sugar for `f(x, y)`
+  - Seamless integration with existing function calls
+  - Works with chained method calls
+
+- **Multi-line Comments**
+  - Block comments using `/* */` syntax
+  - Support for nested multi-line comments
+  - Proper handling of comment delimiters in strings
 
 ### Changed
 - Updated parser to support functional composition via pipelines
@@ -142,14 +170,13 @@ value CustomerId(id: Int) {
 }
 ```
 
-### Known Limitations
-- Pattern matching currently limited to validation expressions (not yet in standalone expressions)
+### Known Limitations (Phase 2)
 - Uniqueness constraints parsed but not enforced
-- Multiple dispatch system not yet implemented
-- No relational features yet
-- Pipeline operator currently limited (no proper function application on right side)
-- No support for multi-line comments (only `//` line comments)
-- Function definitions not yet implemented
+- Multiple dispatch system not yet implemented (Phase 3 in progress)
+- No relational features yet (Phase 4+)
+- Limited built-in functions
+- No module system
+- No generic types
 
 ### Internal
 - Project structure following Rust best practices

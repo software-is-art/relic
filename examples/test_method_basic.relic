@@ -1,0 +1,19 @@
+// Basic method dispatch test
+
+// Methods with different parameter types  
+method double(n: Int) -> Int {
+    n * 2
+}
+
+method double(s: String) -> String {
+    s + s
+}
+
+// Test with Any type
+method show(x: Any) -> String {
+    "Something"
+}
+
+method show(n: Int) -> String {
+    "Number"
+}

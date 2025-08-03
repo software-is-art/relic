@@ -5,6 +5,7 @@ pub enum Token {
     // Keywords
     Value,
     Fn,
+    Method,
     Validate,
     Normalize,
     Unique,
@@ -14,6 +15,7 @@ pub enum Token {
     Let,
     In,
     Match,
+    Where,
     Arrow,        // => for match arms
     ReturnArrow,  // -> for function return types
 
@@ -304,6 +306,7 @@ impl Lexer {
         let token = match identifier {
             "value" => Token::Value,
             "fn" => Token::Fn,
+            "method" => Token::Method,
             "validate" => Token::Validate,
             "normalize" => Token::Normalize,
             "unique" => Token::Unique,
@@ -313,6 +316,7 @@ impl Lexer {
             "let" => Token::Let,
             "in" => Token::In,
             "match" => Token::Match,
+            "where" => Token::Where,
             _ => Token::Identifier(identifier.to_string()),
         };
 

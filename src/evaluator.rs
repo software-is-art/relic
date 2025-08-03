@@ -105,41 +105,86 @@ pub fn evaluate_expression(
         }
         
         Expression::FunctionCall(name, args) => {
-            // Check if the function exists
-            let func_decl = registry.get_function(name).ok_or_else(|| {
-                Error::Validation(ValidationError {
-                    message: format!("Unknown function: {}", name),
-                    value_type: "function".to_string(),
-                })
-            })?;
-            
-            // Evaluate arguments
+            // Evaluate arguments first
             let mut arg_values = Vec::new();
             for arg in args {
                 arg_values.push(evaluate_expression(arg, context, registry)?);
             }
             
-            // Check argument count
-            if arg_values.len() != func_decl.parameters.len() {
-                return Err(Error::Validation(ValidationError {
-                    message: format!(
-                        "Function {} expects {} arguments, got {}",
-                        name,
-                        func_decl.parameters.len(),
-                        arg_values.len()
-                    ),
+            // First check if it's a function
+            if let Some(func_decl) = registry.get_function(name) {
+                // Handle as a function call
+                // Check argument count
+                if arg_values.len() != func_decl.parameters.len() {
+                    return Err(Error::Validation(ValidationError {
+                        message: format!(
+                            "Function {} expects {} arguments, got {}",
+                            name,
+                            func_decl.parameters.len(),
+                            arg_values.len()
+                        ),
+                        value_type: "function".to_string(),
+                    }));
+                }
+                
+                // Create new context with function parameters
+                let mut func_context = HashMap::new();
+                for (param, value) in func_decl.parameters.iter().zip(arg_values.iter()) {
+                    func_context.insert(param.name.clone(), value.clone());
+                }
+                
+                // Evaluate function body
+                evaluate_expression(&func_decl.body, &func_context, registry)
+            } else if let Some(methods) = registry.get_methods(name) {
+                // Handle as a method call with multiple dispatch
+                // Find the best matching method based on argument types
+                let mut best_match = None;
+                
+                for method in methods {
+                    if method.parameters.len() != arg_values.len() {
+                        continue;
+                    }
+                    
+                    // For now, we do simple type matching based on runtime values
+                    // In the future, we could use more sophisticated type matching
+                    let matches = method.parameters.iter()
+                        .zip(&arg_values)
+                        .all(|(param, value)| {
+                            match (&param.ty, value) {
+                                (crate::types::Type::Int, EvalValue::Integer(_)) => true,
+                                (crate::types::Type::String, EvalValue::String(_)) => true,
+                                (crate::types::Type::Bool, EvalValue::Boolean(_)) => true,
+                                _ => false,
+                            }
+                        });
+                        
+                    if matches {
+                        best_match = Some(method);
+                        break; // Take first exact match for now
+                    }
+                }
+                
+                if let Some(method) = best_match {
+                    // Create new context with method parameters
+                    let mut method_context = HashMap::new();
+                    for (param, value) in method.parameters.iter().zip(arg_values.iter()) {
+                        method_context.insert(param.name.clone(), value.clone());
+                    }
+                    
+                    // Evaluate method body
+                    evaluate_expression(&method.body, &method_context, registry)
+                } else {
+                    Err(Error::Validation(ValidationError {
+                        message: format!("No matching method '{}' found for given arguments", name),
+                        value_type: "method".to_string(),
+                    }))
+                }
+            } else {
+                Err(Error::Validation(ValidationError {
+                    message: format!("Unknown function or method: {}", name),
                     value_type: "function".to_string(),
-                }));
+                }))
             }
-            
-            // Create new context with function parameters
-            let mut func_context = HashMap::new();
-            for (param, value) in func_decl.parameters.iter().zip(arg_values.iter()) {
-                func_context.insert(param.name.clone(), value.clone());
-            }
-            
-            // Evaluate function body
-            evaluate_expression(&func_decl.body, &func_context, registry)
         }
         
         Expression::Let(name, binding, body) => {
@@ -192,6 +237,18 @@ pub fn evaluate_expression(
             // First check if this is a user-defined function (UFC syntax)
             if let Some(_func_decl) = registry.get_function(method) {
                 // Transform x.f(y, z) into f(x, y, z)
+                let mut full_args = vec![obj.as_ref().clone()];
+                full_args.extend(args.clone());
+                return evaluate_expression(
+                    &Expression::FunctionCall(method.clone(), full_args),
+                    context,
+                    registry,
+                );
+            }
+            
+            // Check if this is a method (UFC syntax for methods)
+            if let Some(_methods) = registry.get_methods(method) {
+                // Transform x.f(y, z) into f(x, y, z) for method dispatch
                 let mut full_args = vec![obj.as_ref().clone()];
                 full_args.extend(args.clone());
                 return evaluate_expression(

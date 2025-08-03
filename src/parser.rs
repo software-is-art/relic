@@ -35,8 +35,9 @@ impl Parser {
         match &self.current_token {
             Token::Value => Ok(Declaration::Value(self.parse_value_declaration()?)),
             Token::Fn => Ok(Declaration::Function(self.parse_function_declaration()?)),
+            Token::Method => Ok(Declaration::Method(self.parse_method_declaration()?)),
             _ => Err(Error::Parser(ParserError {
-                message: format!("Expected 'value' or 'fn' keyword, found {:?}", self.current_token),
+                message: format!("Expected 'value', 'fn', or 'method' keyword, found {:?}", self.current_token),
                 line: self.line,
                 column: self.column,
             })),
@@ -97,12 +98,61 @@ impl Parser {
         })
     }
 
+    fn parse_method_declaration(&mut self) -> Result<MethodDeclaration> {
+        self.expect(Token::Method)?;
+        let name = self.expect_identifier()?;
+        self.expect(Token::LeftParen)?;
+        
+        let mut parameters = Vec::new();
+        while self.current_token != Token::RightParen {
+            parameters.push(self.parse_parameter_with_guard()?);
+            if self.current_token == Token::Comma {
+                self.advance()?;
+            } else if self.current_token != Token::RightParen {
+                return Err(Error::Parser(ParserError {
+                    message: "Expected ',' or ')' after parameter".to_string(),
+                    line: self.line,
+                    column: self.column,
+                }));
+            }
+        }
+        
+        self.expect(Token::RightParen)?;
+        self.expect(Token::ReturnArrow)?;
+        let return_type = self.parse_type()?;
+        self.expect(Token::LeftBrace)?;
+        let body = self.parse_expression()?;
+        self.expect(Token::RightBrace)?;
+        
+        Ok(MethodDeclaration {
+            name,
+            parameters,
+            return_type,
+            body,
+        })
+    }
+
     fn parse_parameter(&mut self) -> Result<Parameter> {
         let name = self.expect_identifier()?;
         self.expect(Token::Colon)?;
         let ty = self.parse_type()?;
 
         Ok(Parameter { name, ty })
+    }
+
+    fn parse_parameter_with_guard(&mut self) -> Result<ParameterWithGuard> {
+        let name = self.expect_identifier()?;
+        self.expect(Token::Colon)?;
+        let ty = self.parse_type()?;
+        
+        let guard = if self.current_token == Token::Where {
+            self.advance()?;
+            Some(self.parse_expression()?)
+        } else {
+            None
+        };
+
+        Ok(ParameterWithGuard { name, ty, guard })
     }
 
     fn parse_type(&mut self) -> Result<Type> {
@@ -112,6 +162,7 @@ impl Parser {
                     "String" => Type::String,
                     "Int" => Type::Int,
                     "Bool" => Type::Bool,
+                    "Any" => Type::Any,
                     _ => Type::Value(name.clone()),
                 };
                 self.advance()?;

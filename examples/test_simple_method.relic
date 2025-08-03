@@ -1,0 +1,5 @@
+// Simple method test
+
+method area(c: Circle) -> Int {
+    3
+}

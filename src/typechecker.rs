@@ -27,6 +27,7 @@ impl TypeChecker {
         match declaration {
             Declaration::Value(value_decl) => self.check_value_declaration(value_decl),
             Declaration::Function(func_decl) => self.check_function_declaration(func_decl),
+            Declaration::Method(method_decl) => self.check_method_declaration(method_decl),
         }
     }
 
@@ -124,6 +125,54 @@ impl TypeChecker {
         Ok(())
     }
 
+    fn check_method_declaration(&mut self, decl: &MethodDeclaration) -> Result<()> {
+        // Set up local environment for checking the method body
+        self.locals.clear();
+        for param in &decl.parameters {
+            self.locals.insert(param.name.clone(), param.ty.clone());
+        }
+        
+        // Check guards if present
+        for param in &decl.parameters {
+            if let Some(ref guard) = param.guard {
+                let guard_type = self.check_expression(guard)?;
+                if guard_type != Type::Bool {
+                    return Err(Error::Type(TypeError {
+                        message: format!("Method guard must return Bool, found {:?}", guard_type),
+                    }));
+                }
+            }
+        }
+
+        // Check method body
+        let body_type = self.check_expression(&decl.body)?;
+        if body_type != decl.return_type {
+            return Err(Error::Type(TypeError {
+                message: format!(
+                    "Method body returns {:?} but declared return type is {:?}",
+                    body_type, decl.return_type
+                ),
+            }));
+        }
+
+        // Register the method in the environment
+        let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();
+        let guards: Vec<Option<String>> = decl.parameters.iter()
+            .map(|p| p.guard.as_ref().map(|_| "custom".to_string()))
+            .collect();
+        
+        use crate::types::MethodSignature;
+        let signature = MethodSignature {
+            parameter_types: param_types,
+            return_type: decl.return_type.clone(),
+            guards,
+        };
+        
+        self.env.define_method(decl.name.clone(), signature);
+
+        Ok(())
+    }
+
     pub fn check_expression(&self, expr: &Expression) -> Result<Type> {
         match expr {
             Expression::Binary(op, left, right) => {
@@ -198,39 +247,75 @@ impl TypeChecker {
             }),
 
             Expression::FunctionCall(name, args) => {
-                // Check if function exists
-                let func_type = self.env.get_function(name).ok_or_else(|| {
-                    Error::Type(TypeError {
-                        message: format!("Undefined function: {}", name),
-                    })
-                })?;
-
-                // Check argument count
-                if args.len() != func_type.parameter_types.len() {
-                    return Err(Error::Type(TypeError {
-                        message: format!(
-                            "Function '{}' expects {} arguments, but {} provided",
-                            name,
-                            func_type.parameter_types.len(),
-                            args.len()
-                        ),
-                    }));
-                }
-
-                // Check argument types
-                for (i, (arg, expected_type)) in args.iter().zip(&func_type.parameter_types).enumerate() {
-                    let arg_type = self.check_expression(arg)?;
-                    if arg_type != *expected_type {
+                // First check if it's a function
+                if let Some(func_type) = self.env.get_function(name) {
+                    // Handle as a function call
+                    // Check argument count
+                    if args.len() != func_type.parameter_types.len() {
                         return Err(Error::Type(TypeError {
                             message: format!(
-                                "Function '{}' parameter {} expects {:?}, but {:?} provided",
-                                name, i + 1, expected_type, arg_type
+                                "Function '{}' expects {} arguments, but {} provided",
+                                name,
+                                func_type.parameter_types.len(),
+                                args.len()
                             ),
                         }));
                     }
-                }
 
-                Ok(func_type.return_type.clone())
+                    // Check argument types
+                    for (i, (arg, expected_type)) in args.iter().zip(&func_type.parameter_types).enumerate() {
+                        let arg_type = self.check_expression(arg)?;
+                        if arg_type != *expected_type {
+                            return Err(Error::Type(TypeError {
+                                message: format!(
+                                    "Function '{}' parameter {} expects {:?}, but {:?} provided",
+                                    name, i + 1, expected_type, arg_type
+                                ),
+                            }));
+                        }
+                    }
+
+                    Ok(func_type.return_type.clone())
+                } else if let Some(methods) = self.env.get_methods(name) {
+                    // Handle as a method call with multiple dispatch
+                    // Collect argument types
+                    let arg_types: Vec<Type> = args.iter()
+                        .map(|arg| self.check_expression(arg))
+                        .collect::<Result<Vec<_>>>()?;
+                    
+                    // Find the best matching method
+                    let mut best_match = None;
+                    for method in methods {
+                        if method.parameter_types.len() != arg_types.len() {
+                            continue;
+                        }
+                        
+                        // Check if all parameter types match
+                        let matches = method.parameter_types.iter()
+                            .zip(&arg_types)
+                            .all(|(expected, actual)| expected == actual);
+                            
+                        if matches {
+                            best_match = Some(method);
+                            break; // For now, take the first exact match
+                        }
+                    }
+                    
+                    if let Some(method) = best_match {
+                        Ok(method.return_type.clone())
+                    } else {
+                        Err(Error::Type(TypeError {
+                            message: format!(
+                                "No matching method '{}' found for argument types {:?}",
+                                name, arg_types
+                            ),
+                        }))
+                    }
+                } else {
+                    Err(Error::Type(TypeError {
+                        message: format!("Undefined function or method: {}", name),
+                    }))
+                }
             },
 
             Expression::MemberAccess(object, member) => {
@@ -246,11 +331,18 @@ impl TypeChecker {
             }
 
             Expression::MethodCall(object, method, args) => {
+                // Get the object type first
+                let object_type = self.check_expression(object)?;
+                
+                // Collect all argument types (object type + arg types)
+                let mut all_arg_types = vec![object_type.clone()];
+                for arg in args {
+                    all_arg_types.push(self.check_expression(arg)?);
+                }
+                
                 // First check if this is a user-defined function (UFC syntax)
                 if let Some(func_type) = self.env.get_function(method) {
                     // Transform x.f(y, z) into f(x, y, z) for type checking
-                    let object_type = self.check_expression(object)?;
-                    
                     // Check that the function can accept the object as first parameter
                     if func_type.parameter_types.is_empty() {
                         return Err(Error::Type(TypeError {
@@ -279,10 +371,9 @@ impl TypeChecker {
                         }));
                     }
                     
-                    for (i, arg) in args.iter().enumerate() {
-                        let arg_type = self.check_expression(arg)?;
+                    for (i, arg_type) in all_arg_types[1..].iter().enumerate() {
                         let expected_type = &func_type.parameter_types[i + 1];
-                        if arg_type != *expected_type {
+                        if arg_type != expected_type {
                             return Err(Error::Type(TypeError {
                                 message: format!(
                                     "Function {} parameter {} type mismatch: expected {:?}, got {:?}",
@@ -295,8 +386,32 @@ impl TypeChecker {
                     return Ok(func_type.return_type.clone());
                 }
                 
+                // Check if this is a method (UFC syntax for methods)
+                if let Some(methods) = self.env.get_methods(method) {
+                    // Find the best matching method
+                    let mut best_match = None;
+                    for method_sig in methods {
+                        if method_sig.parameter_types.len() != all_arg_types.len() {
+                            continue;
+                        }
+                        
+                        // Check if all parameter types match
+                        let matches = method_sig.parameter_types.iter()
+                            .zip(&all_arg_types)
+                            .all(|(expected, actual)| expected == actual);
+                            
+                        if matches {
+                            best_match = Some(method_sig);
+                            break; // For now, take the first exact match
+                        }
+                    }
+                    
+                    if let Some(method_sig) = best_match {
+                        return Ok(method_sig.return_type.clone());
+                    }
+                }
+                
                 // Otherwise, handle built-in methods
-                let object_type = self.check_expression(object)?;
                 match (&object_type, method.as_str()) {
                     (Type::String, "toLowerCase") => {
                         if !args.is_empty() {

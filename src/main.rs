@@ -39,6 +39,9 @@ impl Repl {
                 relic::ast::Declaration::Function(f) => {
                     result.push_str(&format!("Defined function: {}\n", f.name));
                 }
+                relic::ast::Declaration::Method(m) => {
+                    result.push_str(&format!("Defined method: {}\n", m.name));
+                }
             }
         }
 
@@ -79,8 +82,9 @@ impl Repl {
                 let name = &input[..paren_pos];
                 let args_str = &input[paren_pos + 1..input.len() - 1];
 
-                // Check if it's a function call - use the expression evaluator instead
-                if self.compiler.get_registry().get_function(name).is_some() {
+                // Check if it's a function or method call - use the expression evaluator instead
+                if self.compiler.get_registry().get_function(name).is_some() 
+                    || self.compiler.get_registry().get_methods(name).is_some() {
                     return self.process_expression(input);
                 }
 
@@ -172,17 +176,18 @@ fn main() {
             "exit" => break,
             "help" => {
                 println!("Commands:");
-                println!("  value TypeName(param: Type) {{ ... }} - Define a value type");
-                println!("  fn name(params) -> Type {{ ... }}     - Define a function");
-                println!("  TypeName(value)                       - Create a value instance");
-                println!("  functionName(args)                    - Call a function");
-                println!("  help                                  - Show this help");
-                println!("  exit                                  - Exit the REPL");
+                println!("  value TypeName(param: Type) {{ ... }}     - Define a value type");
+                println!("  fn name(params) -> Type {{ ... }}         - Define a function");
+                println!("  method name(params) -> Type {{ ... }}     - Define a method");
+                println!("  TypeName(value)                           - Create a value instance");
+                println!("  functionName(args)                        - Call a function");
+                println!("  help                                      - Show this help");
+                println!("  exit                                      - Exit the REPL");
             }
             "" => continue,
             _ => {
                 // Determine if this is a declaration or expression
-                let result = if input.starts_with("value ") || input.starts_with("fn ") {
+                let result = if input.starts_with("value ") || input.starts_with("fn ") || input.starts_with("method ") {
                     repl.process_declaration(input)
                 } else {
                     // Try to parse as an expression first

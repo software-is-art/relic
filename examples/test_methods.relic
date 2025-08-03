@@ -1,0 +1,37 @@
+// Test basic method declarations with multiple dispatch
+
+// Define some value types
+value Circle(radius: Int) {
+    validate: radius > 0
+}
+
+value Rectangle(width: Int, height: Int) {
+    validate: width > 0 && height > 0
+}
+
+// Define area methods with multiple dispatch
+method area(c: Circle) -> Int {
+    3 * c.radius * c.radius
+}
+
+method area(r: Rectangle) -> Int {
+    r.width * r.height
+}
+
+// Test generic methods with Any type
+method display(x: Any) -> String {
+    "Generic display"
+}
+
+method display(n: Int) -> String {
+    "Int: " + n.toString()
+}
+
+// Test methods with guards
+method process(x: Int where x > 0) -> Int {
+    x * 2
+}
+
+method process(x: Int where x <= 0) -> Int {
+    0
+}

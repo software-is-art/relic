@@ -26,6 +26,7 @@ impl Compiler {
         match declaration {
             Declaration::Value(value_decl) => self.compile_value_declaration(value_decl),
             Declaration::Function(func_decl) => self.compile_function_declaration(func_decl),
+            Declaration::Method(method_decl) => self.compile_method_declaration(method_decl),
         }
     }
 
@@ -98,6 +99,12 @@ impl Compiler {
         // For now, we'll store function declarations in the registry
         // In a full implementation, functions would be compiled to executable code
         self.registry.register_function(decl.clone());
+        Ok(())
+    }
+
+    fn compile_method_declaration(&mut self, decl: &MethodDeclaration) -> Result<()> {
+        // Store method declarations in the registry for multiple dispatch
+        self.registry.register_method(decl.clone());
         Ok(())
     }
 

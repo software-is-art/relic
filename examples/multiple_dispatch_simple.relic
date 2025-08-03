@@ -1,0 +1,40 @@
+// Simple Multiple Dispatch Example
+// Demonstrates method dispatch based on argument types
+
+// Basic arithmetic methods with type-based dispatch
+method add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+method multiply(x: Int, y: Int) -> Int {
+    x * y
+}
+
+// Methods can have the same name with different implementations
+method process(x: Int) -> Int {
+    x * 2  // Double integers
+}
+
+method process(x: Bool) -> Bool {
+    !x     // Negate booleans
+}
+
+// UFC syntax works with methods
+fn test_ufc_methods() -> Int {
+    let x = 10 in
+    let doubled = x.multiply(2) in
+    let added = doubled.add(5) in
+    added  // Returns 25
+}
+
+// Demonstrate method chaining
+fn test_method_chaining() -> Int {
+    5.add(3).multiply(4).add(2)  // Returns 34
+}
+
+// Show that dispatch selects the right method
+fn test_dispatch_selection() -> Bool {
+    let x = process(42) in
+    let y = process(true) in
+    x == 84 && y == false
+}

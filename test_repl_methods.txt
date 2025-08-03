@@ -1,0 +1,7 @@
+method add(x: Int, y: Int) -> Int { x + y }
+method add(x: String, y: String) -> String { x }
+add(5, 10)
+add("hello", "world")
+fn test() -> Int { add(1, 2) }
+test()
+exit

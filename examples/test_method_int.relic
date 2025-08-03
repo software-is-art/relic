@@ -1,0 +1,15 @@
+// Basic method dispatch test with integers only
+
+// Methods with different parameter types  
+method double(n: Int) -> Int {
+    n * 2
+}
+
+// Test with Any type
+method process(x: Any) -> Int {
+    0
+}
+
+method process(n: Int) -> Int {
+    n + 1
+}

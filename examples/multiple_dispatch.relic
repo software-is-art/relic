@@ -1,0 +1,50 @@
+// Multiple Dispatch Example
+// This example demonstrates Relic's multiple dispatch system
+// where method selection is based on ALL argument types
+
+// Define some value types
+value Temperature(celsius: Int) {
+    validate: celsius > -273  // Absolute zero check
+}
+
+value Distance(meters: Int) {
+    validate: meters >= 0
+}
+
+// Define methods with the same name but different type signatures
+method scale(t: Temperature, factor: Int) -> Temperature {
+    Temperature(t.celsius * factor)
+}
+
+method scale(d: Distance, factor: Int) -> Distance {
+    Distance(d.meters * factor)
+}
+
+// Methods can dispatch on multiple parameters
+method combine(t1: Temperature, t2: Temperature) -> Temperature {
+    Temperature(t1.celsius + t2.celsius)
+}
+
+method combine(d1: Distance, d2: Distance) -> Distance {
+    Distance(d1.meters + d2.meters)
+}
+
+// UFC syntax works with multiple dispatch
+fn test_ufc_dispatch() -> Int {
+    let temp = Temperature(20) in
+    let scaled = temp.scale(2) in  // Calls scale(Temperature, Int)
+    scaled.celsius
+}
+
+// Function showing type-based dispatch
+fn demonstrate_dispatch() -> Int {
+    let t1 = Temperature(10) in
+    let t2 = Temperature(15) in
+    let combined_temp = combine(t1, t2) in
+    
+    let d1 = Distance(100) in
+    let d2 = Distance(200) in
+    let combined_dist = combine(d1, d2) in
+    
+    combined_temp.celsius + combined_dist.meters  // Returns 325
+}

@@ -1,0 +1,9 @@
+// Method test with value type
+
+value Circle(radius: Int) {
+    validate: radius > 0
+}
+
+method area(c: Circle) -> Int {
+    c.radius * c.radius * 3
+}

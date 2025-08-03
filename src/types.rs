@@ -6,6 +6,7 @@ pub enum Type {
     Int,
     Bool,
     Value(String),
+    Any,
     Unknown,
 }
 
@@ -13,6 +14,7 @@ pub enum Type {
 pub struct TypeEnvironment {
     values: HashMap<String, ValueType>,
     functions: HashMap<String, FunctionType>,
+    methods: HashMap<String, Vec<MethodSignature>>,
 }
 
 #[derive(Debug, Clone)]
@@ -20,6 +22,13 @@ pub struct FunctionType {
     pub name: String,
     pub parameter_types: Vec<Type>,
     pub return_type: Type,
+}
+
+#[derive(Debug, Clone)]
+pub struct MethodSignature {
+    pub parameter_types: Vec<Type>,
+    pub return_type: Type,
+    pub guards: Vec<Option<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +50,7 @@ impl TypeEnvironment {
         Self {
             values: HashMap::new(),
             functions: HashMap::new(),
+            methods: HashMap::new(),
         }
     }
 
@@ -63,5 +73,13 @@ impl TypeEnvironment {
 
     pub fn get_function(&self, name: &str) -> Option<&FunctionType> {
         self.functions.get(name)
+    }
+    
+    pub fn define_method(&mut self, name: String, signature: MethodSignature) {
+        self.methods.entry(name).or_insert_with(Vec::new).push(signature);
+    }
+    
+    pub fn get_methods(&self, name: &str) -> Option<&Vec<MethodSignature>> {
+        self.methods.get(name)
     }
 }

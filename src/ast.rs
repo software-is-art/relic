@@ -9,6 +9,7 @@ pub struct Program {
 pub enum Declaration {
     Value(ValueDeclaration),
     Function(FunctionDeclaration),
+    Method(MethodDeclaration),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,9 +28,24 @@ pub struct FunctionDeclaration {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct MethodDeclaration {
+    pub name: String,
+    pub parameters: Vec<ParameterWithGuard>,
+    pub return_type: Type,
+    pub body: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     pub name: String,
     pub ty: Type,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParameterWithGuard {
+    pub name: String,
+    pub ty: Type,
+    pub guard: Option<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
