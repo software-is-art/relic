@@ -4,6 +4,7 @@ use crate::error::{Error, LexerError, Result};
 pub enum Token {
     // Keywords
     Value,
+    Fn,
     Validate,
     Normalize,
     Unique,
@@ -13,7 +14,8 @@ pub enum Token {
     Let,
     In,
     Match,
-    Arrow,
+    Arrow,        // => for match arms
+    ReturnArrow,  // -> for function return types
 
     // Identifiers and literals
     Identifier(String),
@@ -119,7 +121,12 @@ impl Lexer {
                 }
                 '-' => {
                     self.advance();
-                    Ok(Token::Minus)
+                    if self.current_char == Some('>') {
+                        self.advance();
+                        Ok(Token::ReturnArrow)
+                    } else {
+                        Ok(Token::Minus)
+                    }
                 }
                 '*' => {
                     self.advance();
@@ -133,6 +140,11 @@ impl Lexer {
                         while self.current_char.is_some() && self.current_char != Some('\n') {
                             self.advance();
                         }
+                        self.next_token()
+                    } else if self.current_char == Some('*') {
+                        // Multi-line comment - skip until */
+                        self.advance();
+                        self.skip_multiline_comment()?;
                         self.next_token()
                     } else {
                         Ok(Token::Slash)
@@ -244,6 +256,38 @@ impl Lexer {
         }
     }
 
+    fn skip_multiline_comment(&mut self) -> Result<()> {
+        let mut depth = 1; // Support nested comments
+        
+        while depth > 0 && self.current_char.is_some() {
+            if self.current_char == Some('*') {
+                self.advance();
+                if self.current_char == Some('/') {
+                    self.advance();
+                    depth -= 1;
+                }
+            } else if self.current_char == Some('/') {
+                self.advance();
+                if self.current_char == Some('*') {
+                    self.advance();
+                    depth += 1;
+                }
+            } else {
+                self.advance();
+            }
+        }
+        
+        if depth > 0 {
+            Err(Error::Lexer(LexerError {
+                message: "Unterminated multi-line comment".to_string(),
+                line: self.line,
+                column: self.column,
+            }))
+        } else {
+            Ok(())
+        }
+    }
+
     fn read_identifier(&mut self) -> Result<Token> {
         let start = self.position;
 
@@ -259,6 +303,7 @@ impl Lexer {
 
         let token = match identifier {
             "value" => Token::Value,
+            "fn" => Token::Fn,
             "validate" => Token::Validate,
             "normalize" => Token::Normalize,
             "unique" => Token::Unique,

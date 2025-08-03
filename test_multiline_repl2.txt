@@ -1,0 +1,4 @@
+fn test() -> Int { /* inline comment */ 42 }
+test()
+fn add(x: Int, y: Int) -> Int { x + y /* result */ }
+5.add(10)

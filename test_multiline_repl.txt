@@ -1,0 +1,4 @@
+/* Define a function with multi-line comment */ fn test() -> Int { 42 }
+test()
+fn add(x: Int, y: Int /* second param */) -> Int { /* implementation */ x + y }
+5.add(10)

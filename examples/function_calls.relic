@@ -1,0 +1,25 @@
+// Example demonstrating function calls
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn isPositive(n: Int) -> Bool {
+    n > 0
+}
+
+// Function that calls other functions
+fn addAndDouble(a: Int, b: Int) -> Int {
+    double(add(a, b))
+}
+
+// Function with let binding and function call
+fn complexCalc(x: Int) -> Int {
+    let sum = add(x, 10) in
+    let doubled = double(sum) in
+    doubled
+}

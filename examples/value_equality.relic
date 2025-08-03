@@ -1,0 +1,29 @@
+// Test value type equality and comparison operators
+
+// Simple string value with equality check
+value Username(name: String) {
+    validate: name.length > 3 && name != "admin"
+    normalize: name.toLowerCase()
+}
+
+// Value with multiple equality checks
+value AccessLevel(level: Int) {
+    validate: level == 1 || level == 2 || level == 3
+}
+
+// Value using not-equal operator
+value Temperature(celsius: Int) {
+    validate: celsius >= -273 && celsius != 0
+}
+
+// String equality with normalization
+value NormalizedText(text: String) {
+    validate: let normalized = text.toLowerCase() in
+        normalized == "hello" || normalized == "world"
+    normalize: text.toLowerCase()
+}
+
+// Test equality with simple checks
+value Response(code: Int) {
+    validate: code == 200 || code == 404 || code == 500
+}

@@ -11,10 +11,13 @@ Relic is an experimental programming language written in Rust that implements va
 ### Build and Run
 - `cargo build` - Build the project
 - `cargo run` - Run the REPL
+- `cargo run <filename>` - Run a Relic source file (e.g., `cargo run examples/let_bindings.relic`)
 - `cargo test` - Run all tests
 - `cargo fmt` - Format code
 - `cargo clippy` - Run linter
 - `cargo build --release` - Build optimized release version
+
+**Important:** Do NOT use `cargo run < file.relic` as this will pipe the file to stdin and cause the REPL to process each line separately. Always pass the filename as a command-line argument.
 
 ### Testing Specific Components
 - `cargo test lexer` - Test lexer only

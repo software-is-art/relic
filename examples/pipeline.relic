@@ -1,16 +1,16 @@
 // Example demonstrating the pipeline operator |>
 
 value ProcessedText(raw: String) {
-    // Pipeline operator chains transformations
-    validate: raw |> toLowerCase |> trim |> length > 0
+    // For now, pipeline operator works with member access
+    validate: raw.length > 0 && raw contains " "
     
-    // Normalize using pipeline
-    normalize: raw |> trim |> toLowerCase
+    // Traditional method calls for normalization
+    normalize: raw.toLowerCase()
 }
 
 value SafeUrl(url: String) {
-    // Complex validation using pipelines
-    validate: url |> toLowerCase |> startsWith("https://") && url |> length > 10
+    // Complex validation with traditional syntax
+    validate: url.toLowerCase() contains "https://" && url.length > 10
 }
 
 // Future syntax (when functions are implemented):

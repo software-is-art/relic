@@ -1,13 +1,18 @@
-use crate::ast::ValueDeclaration;
+use crate::ast::{ValueDeclaration, FunctionDeclaration};
 use crate::error::{Error, Result, ValidationError};
 use std::any::Any;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::fmt::{Debug, Display};
 
-pub trait ValueObject: Any + Send + Sync {
+pub trait ValueObject: Any + Send + Sync + Debug + Display {
     fn validate(&self) -> Result<()>;
     fn normalize(&mut self) -> Result<()>;
     fn type_name(&self) -> &'static str;
     fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn equals(&self, other: &dyn ValueObject) -> bool;
+    fn hash_value(&self) -> u64;
 }
 
 pub struct ValueConstructor {
@@ -18,17 +23,40 @@ pub struct ValueConstructor {
 
 pub struct ValueRegistry {
     constructors: HashMap<String, ValueConstructor>,
+    functions: HashMap<String, FunctionDeclaration>,
 }
 
 impl ValueRegistry {
     pub fn new() -> Self {
         Self {
             constructors: HashMap::new(),
+            functions: HashMap::new(),
         }
     }
 
     pub fn register(&mut self, name: String, constructor: ValueConstructor) {
         self.constructors.insert(name, constructor);
+    }
+
+    pub fn register_function(&mut self, func_decl: FunctionDeclaration) {
+        self.functions.insert(func_decl.name.clone(), func_decl);
+    }
+
+    pub fn get_function(&self, name: &str) -> Option<&FunctionDeclaration> {
+        self.functions.get(name)
+    }
+
+    pub fn execute_function(&self, name: &str, args: Vec<Box<dyn Any + Send + Sync>>) -> Result<Box<dyn Any + Send + Sync>> {
+        let func = self.get_function(name).ok_or_else(|| {
+            Error::Validation(ValidationError {
+                message: format!("Unknown function: {}", name),
+                value_type: "function".to_string(),
+            })
+        })?;
+
+        // For now, we'll just return a placeholder result
+        // In a full implementation, this would interpret the function body
+        Ok(Box::new(format!("Function {} called with {} arguments", name, args.len())))
     }
 
     pub fn construct(
@@ -66,9 +94,16 @@ impl ValueRegistry {
     }
 }
 
+#[derive(Debug)]
 struct GenericValueObject {
     type_name: String,
     data: Box<dyn Any + Send + Sync>,
+}
+
+impl Display for GenericValueObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({:?})", self.type_name, self.data)
+    }
 }
 
 impl ValueObject for GenericValueObject {
@@ -89,11 +124,42 @@ impl ValueObject for GenericValueObject {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn equals(&self, other: &dyn ValueObject) -> bool {
+        // First check if types match
+        if self.type_name() != other.type_name() {
+            return false;
+        }
+
+        // For now, we compare the debug representation
+        // In a real implementation, we'd have type-specific comparison
+        format!("{:?}", self.data) == format!("{:?}", other.as_any())
+    }
+
+    fn hash_value(&self) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        let mut hasher = DefaultHasher::new();
+        self.type_name.hash(&mut hasher);
+        // Hash the debug representation for now
+        format!("{:?}", self.data).hash(&mut hasher);
+        hasher.finish()
+    }
 }
 
 // Example implementation for EmailAddress value type
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EmailAddress {
     value: String,
+}
+
+impl Display for EmailAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EmailAddress({})", self.value)
+    }
 }
 
 impl EmailAddress {
@@ -139,5 +205,24 @@ impl ValueObject for EmailAddress {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn equals(&self, other: &dyn ValueObject) -> bool {
+        if let Some(other_email) = other.as_any().downcast_ref::<EmailAddress>() {
+            self == other_email
+        } else {
+            false
+        }
+    }
+
+    fn hash_value(&self) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 }

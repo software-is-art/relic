@@ -1,0 +1,47 @@
+// Test Uniform Function Call Syntax (UFC)
+
+// Define some functions
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn triple(x: Int) -> Int {
+    x * 3
+}
+
+// Test complex example
+fn addThenDouble(x: Int, y: Int) -> Int {
+    let sum = x + y in
+    sum.double()
+}
+
+// Create a function that tests all UFC features
+fn testUFC() -> Int {
+    // Test basic UFC
+    let x = 5 in
+    let test1 = x.double() in
+    
+    // Test UFC with additional arguments
+    let a = 10 in
+    let b = 20 in
+    let test2 = a.add(b) in
+    
+    // Test method chaining with UFC
+    let num = 7 in
+    let test3 = num.double().triple() in
+    
+    // Test complex example
+    let result = 3.addThenDouble(4) in
+    
+    result
+}
+
+// Test UFC mixed with built-in methods
+fn testBuiltIn() -> String {
+    let text = "HELLO" in
+    text.toLowerCase()
+}

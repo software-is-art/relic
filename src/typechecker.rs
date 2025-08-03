@@ -26,6 +26,7 @@ impl TypeChecker {
     fn check_declaration(&mut self, declaration: &Declaration) -> Result<()> {
         match declaration {
             Declaration::Value(value_decl) => self.check_value_declaration(value_decl),
+            Declaration::Function(func_decl) => self.check_function_declaration(func_decl),
         }
     }
 
@@ -85,7 +86,45 @@ impl TypeChecker {
         Ok(())
     }
 
-    fn check_expression(&self, expr: &Expression) -> Result<Type> {
+    fn check_function_declaration(&mut self, decl: &FunctionDeclaration) -> Result<()> {
+        // Check if function already exists
+        if self.env.get_function(&decl.name).is_some() {
+            return Err(Error::Type(TypeError {
+                message: format!("Function '{}' is already defined", decl.name),
+            }));
+        }
+
+        // Set up local environment for checking the function body
+        self.locals.clear();
+        for param in &decl.parameters {
+            self.locals.insert(param.name.clone(), param.ty.clone());
+        }
+
+        // Type check the function body
+        let body_type = self.check_expression(&decl.body)?;
+        
+        // Ensure body type matches declared return type
+        if body_type != decl.return_type {
+            return Err(Error::Type(TypeError {
+                message: format!(
+                    "Function body returns {:?} but declared return type is {:?}",
+                    body_type, decl.return_type
+                ),
+            }));
+        }
+
+        // Register the function in the environment
+        let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();
+        self.env.define_function(
+            decl.name.clone(),
+            param_types,
+            decl.return_type.clone(),
+        );
+
+        Ok(())
+    }
+
+    pub fn check_expression(&self, expr: &Expression) -> Result<Type> {
         match expr {
             Expression::Binary(op, left, right) => {
                 let left_type = self.check_expression(left)?;
@@ -158,6 +197,42 @@ impl TypeChecker {
                 })
             }),
 
+            Expression::FunctionCall(name, args) => {
+                // Check if function exists
+                let func_type = self.env.get_function(name).ok_or_else(|| {
+                    Error::Type(TypeError {
+                        message: format!("Undefined function: {}", name),
+                    })
+                })?;
+
+                // Check argument count
+                if args.len() != func_type.parameter_types.len() {
+                    return Err(Error::Type(TypeError {
+                        message: format!(
+                            "Function '{}' expects {} arguments, but {} provided",
+                            name,
+                            func_type.parameter_types.len(),
+                            args.len()
+                        ),
+                    }));
+                }
+
+                // Check argument types
+                for (i, (arg, expected_type)) in args.iter().zip(&func_type.parameter_types).enumerate() {
+                    let arg_type = self.check_expression(arg)?;
+                    if arg_type != *expected_type {
+                        return Err(Error::Type(TypeError {
+                            message: format!(
+                                "Function '{}' parameter {} expects {:?}, but {:?} provided",
+                                name, i + 1, expected_type, arg_type
+                            ),
+                        }));
+                    }
+                }
+
+                Ok(func_type.return_type.clone())
+            },
+
             Expression::MemberAccess(object, member) => {
                 let object_type = self.check_expression(object)?;
 
@@ -171,14 +246,70 @@ impl TypeChecker {
             }
 
             Expression::MethodCall(object, method, args) => {
+                // First check if this is a user-defined function (UFC syntax)
+                if let Some(func_type) = self.env.get_function(method) {
+                    // Transform x.f(y, z) into f(x, y, z) for type checking
+                    let object_type = self.check_expression(object)?;
+                    
+                    // Check that the function can accept the object as first parameter
+                    if func_type.parameter_types.is_empty() {
+                        return Err(Error::Type(TypeError {
+                            message: format!("Function {} takes no parameters", method),
+                        }));
+                    }
+                    
+                    if func_type.parameter_types[0] != object_type {
+                        return Err(Error::Type(TypeError {
+                            message: format!(
+                                "Cannot call {} on type {:?}, expected {:?}",
+                                method, object_type, func_type.parameter_types[0]
+                            ),
+                        }));
+                    }
+                    
+                    // Check remaining arguments
+                    if args.len() != func_type.parameter_types.len() - 1 {
+                        return Err(Error::Type(TypeError {
+                            message: format!(
+                                "Function {} expects {} arguments, got {}",
+                                method,
+                                func_type.parameter_types.len() - 1,
+                                args.len()
+                            ),
+                        }));
+                    }
+                    
+                    for (i, arg) in args.iter().enumerate() {
+                        let arg_type = self.check_expression(arg)?;
+                        let expected_type = &func_type.parameter_types[i + 1];
+                        if arg_type != *expected_type {
+                            return Err(Error::Type(TypeError {
+                                message: format!(
+                                    "Function {} parameter {} type mismatch: expected {:?}, got {:?}",
+                                    method, i + 2, expected_type, arg_type
+                                ),
+                            }));
+                        }
+                    }
+                    
+                    return Ok(func_type.return_type.clone());
+                }
+                
+                // Otherwise, handle built-in methods
                 let object_type = self.check_expression(object)?;
-
-                // Handle built-in methods
                 match (&object_type, method.as_str()) {
                     (Type::String, "toLowerCase") => {
                         if !args.is_empty() {
                             return Err(Error::Type(TypeError {
                                 message: "toLowerCase takes no arguments".to_string(),
+                            }));
+                        }
+                        Ok(Type::String)
+                    }
+                    (Type::String, "toUpperCase") => {
+                        if !args.is_empty() {
+                            return Err(Error::Type(TypeError {
+                                message: "toUpperCase takes no arguments".to_string(),
                             }));
                         }
                         Ok(Type::String)

@@ -1,0 +1,26 @@
+/* This is a multi-line comment
+   It can span multiple lines
+   and contain any characters */
+
+fn testFunction() -> Int {
+    /* Multi-line comment inside a function */
+    42
+}
+
+/* Nested comments test:
+   /* This is a nested comment
+      /* And another level */
+   */
+   Back to the outer comment
+*/
+
+value TestValue(x: Int) {
+    validate: x > 0 /* inline comment */ && x < 100
+}
+
+// Mixed comment styles
+fn anotherFunction(x: Int /* parameter comment */) -> Int {
+    // Single line comment
+    /* Multi-line
+       comment */ x * 2
+}

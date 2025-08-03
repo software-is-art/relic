@@ -1,0 +1,86 @@
+/*
+ * Phase 2 Complete Test File
+ * 
+ * This file demonstrates all Phase 2 features working together:
+ * - Value type declarations with validation
+ * - Function declarations and evaluation
+ * - Let bindings
+ * - Pipeline operator |>
+ * - Pattern matching
+ * - Value equality
+ * - Uniform Function Call Syntax (UFC)
+ * - Single-line comments //
+ * - Multi-line comments /* */
+ */
+
+// Value type with validation
+value Age(value: Int) {
+    validate: value >= 0 && value <= 150
+}
+
+// Functions with UFC support
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn isAdult(age: Age) -> Bool {
+    /* Check if age is 18 or above */
+    match age {
+        Age(value) => value >= 18
+    }
+}
+
+// Complex function using multiple features
+fn processNumber(n: Int) -> Int {
+    let doubled = n.double() in        // UFC: n.double()
+    let tripled = n * 3 in
+    let sum = doubled.add(tripled) in  // UFC: doubled.add(tripled)
+    sum |> double                      // Pipeline operator
+}
+
+/* 
+ * Test function that demonstrates all features
+ */
+fn testAllFeatures() -> Bool {
+    // Let bindings with UFC
+    let x = 10 in
+    let y = x.double() in              // UFC: x.double() -> 20
+    
+    // Pipeline with UFC
+    let z = 5 
+        |> double                      // 10
+        |> add(15)                     // 25 (partial application)
+        in
+    
+    // Pattern matching with value types
+    let age = Age(25) in
+    let adult = isAdult(age) in
+    
+    // Value equality
+    let result = y == 20 && z == 25 && adult in
+    
+    result
+}
+
+// Nested comments test
+fn nestedCommentTest() -> String {
+    /* This function tests nested comments
+       /* Level 1 nested comment
+          /* Level 2 nested comment */
+          Back to level 1
+       */
+       Back to main comment
+    */
+    "Nested comments work!"
+}
+
+// UFC chain example
+fn chainExample(x: Int) -> Int {
+    x.double()      // 2x
+     .add(10)       // 2x + 10
+     .double()      // 4x + 20
+}

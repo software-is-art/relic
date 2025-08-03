@@ -12,6 +12,14 @@ pub enum Type {
 #[derive(Debug, Clone)]
 pub struct TypeEnvironment {
     values: HashMap<String, ValueType>,
+    functions: HashMap<String, FunctionType>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionType {
+    pub name: String,
+    pub parameter_types: Vec<Type>,
+    pub return_type: Type,
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +40,7 @@ impl TypeEnvironment {
     pub fn new() -> Self {
         Self {
             values: HashMap::new(),
+            functions: HashMap::new(),
         }
     }
 
@@ -41,5 +50,18 @@ impl TypeEnvironment {
 
     pub fn get_value(&self, name: &str) -> Option<&ValueType> {
         self.values.get(name)
+    }
+
+    pub fn define_function(&mut self, name: String, parameter_types: Vec<Type>, return_type: Type) {
+        let function_type = FunctionType {
+            name: name.clone(),
+            parameter_types,
+            return_type,
+        };
+        self.functions.insert(name, function_type);
+    }
+
+    pub fn get_function(&self, name: &str) -> Option<&FunctionType> {
+        self.functions.get(name)
     }
 }

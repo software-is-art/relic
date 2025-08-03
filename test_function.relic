@@ -1,0 +1,11 @@
+// Test function implementation
+
+// Define a simple function
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+// Define another function
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}

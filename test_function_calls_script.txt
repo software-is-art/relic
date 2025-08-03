@@ -1,0 +1,17 @@
+fn double(x: Int) -> Int { x * 2 }
+fn add(x: Int, y: Int) -> Int { x + y }
+fn quadruple(x: Int) -> Int { double(double(x)) }
+fn complexCalc(x: Int) -> Int { let doubled = x * 2 in let tripled = x * 3 in doubled + tripled }
+fn isPositive(x: Int) -> Bool { x > 0 }
+fn isEven(x: Int) -> Bool { let half = x / 2 in x == half * 2 }
+double(21)
+add(10, 32)
+quadruple(5)
+complexCalc(10)
+isPositive(42)
+isPositive(-5)
+isEven(8)
+isEven(7)
+21 |> double
+5 |> quadruple
+exit

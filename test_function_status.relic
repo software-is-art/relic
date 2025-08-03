@@ -1,0 +1,9 @@
+// Test current function implementation status
+
+// Define a simple function
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+// Try to use it
+double(21)

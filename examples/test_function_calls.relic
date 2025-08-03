@@ -1,0 +1,13 @@
+// Test function definitions and calls
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn isPositive(n: Int) -> Bool {
+    n > 0
+}
+
+// Test calling the functions
+let result = add(5, 3)
+let check = isPositive(result)

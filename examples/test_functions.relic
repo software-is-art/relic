@@ -1,0 +1,13 @@
+// Test function definitions
+
+fn increment(x: Int) -> Int {
+    x + 1
+}
+
+fn isPositive(n: Int) -> Bool {
+    n > 0
+}
+
+fn negate(b: Bool) -> Bool {
+    !b
+}

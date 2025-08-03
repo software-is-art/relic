@@ -5,7 +5,7 @@ use crate::types::Type;
 
 pub struct Parser {
     lexer: Lexer,
-    current_token: Token,
+    pub current_token: Token,
     line: usize,
     column: usize,
 }
@@ -34,8 +34,9 @@ impl Parser {
     fn parse_declaration(&mut self) -> Result<Declaration> {
         match &self.current_token {
             Token::Value => Ok(Declaration::Value(self.parse_value_declaration()?)),
+            Token::Fn => Ok(Declaration::Function(self.parse_function_declaration()?)),
             _ => Err(Error::Parser(ParserError {
-                message: format!("Expected 'value' keyword, found {:?}", self.current_token),
+                message: format!("Expected 'value' or 'fn' keyword, found {:?}", self.current_token),
                 line: self.line,
                 column: self.column,
             })),
@@ -58,6 +59,40 @@ impl Parser {
         Ok(ValueDeclaration {
             name,
             parameter,
+            body,
+        })
+    }
+
+    fn parse_function_declaration(&mut self) -> Result<FunctionDeclaration> {
+        self.expect(Token::Fn)?;
+        let name = self.expect_identifier()?;
+        self.expect(Token::LeftParen)?;
+        
+        let mut parameters = Vec::new();
+        while self.current_token != Token::RightParen {
+            parameters.push(self.parse_parameter()?);
+            if self.current_token == Token::Comma {
+                self.advance()?;
+            } else if self.current_token != Token::RightParen {
+                return Err(Error::Parser(ParserError {
+                    message: "Expected ',' or ')' after parameter".to_string(),
+                    line: self.line,
+                    column: self.column,
+                }));
+            }
+        }
+        
+        self.expect(Token::RightParen)?;
+        self.expect(Token::ReturnArrow)?;
+        let return_type = self.parse_type()?;
+        self.expect(Token::LeftBrace)?;
+        let body = self.parse_expression()?;
+        self.expect(Token::RightBrace)?;
+        
+        Ok(FunctionDeclaration {
+            name,
+            parameters,
+            return_type,
             body,
         })
     }
@@ -132,7 +167,7 @@ impl Parser {
         })
     }
 
-    fn parse_expression(&mut self) -> Result<Expression> {
+    pub fn parse_expression(&mut self) -> Result<Expression> {
         self.parse_pipeline_expression()
     }
 
@@ -330,8 +365,30 @@ impl Parser {
                 Ok(Expression::Literal(Literal::Boolean(false)))
             }
             Token::Identifier(name) => {
+                let func_name = name.clone();
                 self.advance()?;
-                Ok(Expression::Identifier(name.clone()))
+                
+                // Check if this is a function call
+                if self.current_token == Token::LeftParen {
+                    self.advance()?;
+                    let mut args = Vec::new();
+                    
+                    if self.current_token != Token::RightParen {
+                        loop {
+                            args.push(self.parse_expression()?);
+                            if self.current_token == Token::Comma {
+                                self.advance()?;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    self.expect(Token::RightParen)?;
+                    Ok(Expression::FunctionCall(func_name, args))
+                } else {
+                    Ok(Expression::Identifier(func_name))
+                }
             }
             Token::LeftParen => {
                 self.advance()?;

@@ -8,6 +8,7 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     Value(ValueDeclaration),
+    Function(FunctionDeclaration),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -15,6 +16,14 @@ pub struct ValueDeclaration {
     pub name: String,
     pub parameter: Parameter,
     pub body: ValueBody,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionDeclaration {
+    pub name: String,
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
+    pub body: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,6 +45,7 @@ pub enum Expression {
     Unary(UnaryOp, Box<Expression>),
     Literal(Literal),
     Identifier(String),
+    FunctionCall(String, Vec<Expression>),
     MemberAccess(Box<Expression>, String),
     MethodCall(Box<Expression>, String, Vec<Expression>),
     Comparison(ComparisonOp, Box<Expression>, Box<Expression>),

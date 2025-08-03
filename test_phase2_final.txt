@@ -1,0 +1,6 @@
+fn double(x: Int) -> Int { x * 2 }
+fn add(x: Int, y: Int) -> Int { x + y }
+10.double()
+5.double().add(15)
+fn testChain(x: Int) -> Int { x.double().add(100).double() }
+testChain(5)

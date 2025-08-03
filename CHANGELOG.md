@@ -5,6 +5,11 @@ All notable changes to the Relic programming language will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-02-08
+
+### Summary
+Phase 2 is now 97% complete with the addition of value type equality and hashing support. The language continues to mature with essential features for practical use.
+
 ## [Unreleased]
 
 ### Added
@@ -42,12 +47,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test suite for pattern matching functionality
   - Example file showing pattern matching syntax (`examples/pattern_matching.relic`)
 
+- **Value Type Equality** (February 8, 2025)
+  - Implemented equality (`==`) and inequality (`!=`) operators for validation expressions
+  - Added `equals()` and `hash_value()` methods to `ValueObject` trait
+  - Support for structural equality comparison of value objects
+  - Hashing implementation for value objects (enables use in HashSet/HashMap)
+  - Display trait implementation for better debugging
+  - Comprehensive test suite for equality and hashing
+  - Example file demonstrating equality operators (`examples/value_equality.relic`)
+  - Compiler support for all comparison operators (>, <, >=, <=, ==, !=)
+
 ### Changed
 - Updated parser to support functional composition via pipelines
 - Enhanced expression evaluation to handle chained transformations
 - Improved REPL to support file processing mode
 - Extended AST to support match expressions and patterns
 - Type checker now handles pattern matching with proper scoping
+- Enhanced ValueObject trait with equality and hashing capabilities
+- Compiler now evaluates all comparison operators in validation expressions
 
 ### Examples
 ```relic
@@ -68,6 +85,12 @@ value Result(status: Status) {
     validate: match status {
         Status(code) => code == 200 || (code >= 400 && code < 500)
     }
+}
+
+// Value equality checks
+value Username(name: String) {
+    validate: name != "admin" && name != "root"
+    normalize: name.toLowerCase()
 }
 ```
 
@@ -121,7 +144,6 @@ value CustomerId(id: Int) {
 
 ### Known Limitations
 - Pattern matching currently limited to validation expressions (not yet in standalone expressions)
-- Value type equality and structural hashing not yet implemented
 - Uniqueness constraints parsed but not enforced
 - Multiple dispatch system not yet implemented
 - No relational features yet

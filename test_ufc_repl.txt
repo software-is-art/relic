@@ -1,0 +1,7 @@
+fn double(x: Int) -> Int { x * 2 }
+5.double()
+fn add(x: Int, y: Int) -> Int { x + y }
+10.add(20)
+fn triple(x: Int) -> Int { x * 3 }
+7.double().triple()
+"HELLO".toLowerCase()

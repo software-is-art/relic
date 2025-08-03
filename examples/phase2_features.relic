@@ -1,0 +1,35 @@
+/*
+ * Phase 2 Features Test
+ * Demonstrates UFC and multi-line comments
+ */
+
+// Simple functions for UFC testing
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+// Test UFC with method chaining
+fn testUFC() -> Int {
+    /* Using Uniform Function Call Syntax */
+    let x = 10 in
+    x.double()      // Should return 20
+}
+
+fn testUFCChain() -> Int {
+    5.double()      // 10
+     .add(15)       // 25
+     .double()      // 50
+}
+
+/* Test multi-line comments with nesting
+   /* This is nested
+      /* And double nested */
+   */
+*/
+fn testComments() -> String {
+    "Comments work!" // Single-line comment
+}

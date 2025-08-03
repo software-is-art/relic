@@ -1,0 +1,21 @@
+// Example demonstrating function definitions
+
+value EmailAddress(raw: String) {
+    validate: raw contains "@" && raw.length > 3
+    normalize: raw.toLowerCase()
+}
+
+// Simple function that adds two integers
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+// Function that doubles an integer
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+// Function that checks if a number is positive
+fn isPositive(n: Int) -> Bool {
+    n > 0
+}

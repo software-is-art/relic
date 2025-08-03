@@ -5,46 +5,55 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 ## Current Status (February 2025)
 
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
-🚧 **Phase 2 IN PROGRESS**: Parser, lexer, and basic language features (95% complete)
-🔲 **Phase 3 PENDING**: Multiple dispatch system
+✅ **Phase 2 COMPLETED**: Parser, lexer, and basic language features (100% complete)
+🔲 **Phase 3 READY TO START**: Multiple dispatch system
 🔲 **Phases 4-10**: Future work
 
 ### What's Working Now
-- Full lexer and parser for value type declarations
-- Type checker with validation and normalization support
+- Full lexer and parser for value type declarations and functions
+- Type checker with validation, normalization, and function type checking
 - Compiler that generates value constructors from AST
 - Interactive REPL with full pipeline (parse → typecheck → compile → execute)
 - Pipeline operator `|>` for functional composition
-- Let-bindings for intermediate calculations in validation predicates
+- Let-bindings for intermediate calculations in all contexts
+- Function declarations with full evaluation support
+- Functions calling other functions
 - Line comments with `//` syntax
 - File input support via command-line arguments
-- Example files demonstrating all features
-- Comprehensive test suite
+- Pattern matching (basic implementation)
+- Value equality and hashing
+- Comprehensive test suite and examples
 
 ### Recent Additions (February 2025)
 - ✅ Let-bindings (`let x = expr in body`) fully implemented
 - ✅ Support for nested let-bindings
 - ✅ Line comment support (`//`)
+- ✅ Multi-line comment support (`/* */`) with nesting
 - ✅ File input mode for processing `.relic` files
 - ✅ Pipeline operator `|>` fully implemented
 - ✅ Pattern matching on value types (basic implementation)
+- ✅ Value type equality (`==` and `!=` operators)
+- ✅ Hashing support for value objects
+- ✅ Function definitions with complete evaluation
+- ✅ Functions can call other functions
+- ✅ Expression evaluator supporting all language features
+- ✅ **Uniform Function Call Syntax (UFC)** - `x.f(y)` as sugar for `f(x, y)`
 - ✅ Tests for all new features
-- ✅ Example files for pipeline, let-bindings, and pattern matching
+- ✅ Example files for all features including UFC
 
 ### Progress Summary
-Phase 2 is now **95% complete**. The core language features are working well:
+Phase 2 is now **100% complete**! All core language features are working:
 - Value types with validation predicates ✅
 - Expression evaluation with let-bindings ✅
 - Functional composition with pipelines ✅
 - Pattern matching for value deconstruction ✅
+- Value type equality and hashing ✅
+- Function definitions and evaluation ✅
+- Uniform Function Call Syntax ✅
+- Complete comment support (single and multi-line) ✅
 - Interactive REPL with file support ✅
 
-### Remaining Phase 2 Tasks
-1. **Value Type Equality** - Implement `==` and hashing for value objects
-2. **Function Definitions** - Pure transformations as first-class values
-3. **Multi-line Comments** - Support `/* */` style comments
-
-Once these are complete, Phase 2 will be done and we can begin Phase 3: Multiple Dispatch.
+Phase 3: Multiple Dispatch is now ready to begin.
 
 ## Core Philosophy
 
@@ -53,6 +62,19 @@ Relic embodies four fundamental principles:
 2. **Functional-Relational Architecture**: Strict separation of essential state, logic, and effects
 3. **Multiple Dispatch**: Replace control flow with type-based method selection
 4. **Type-Level Relationships**: Encode constraints and relationships in the type system
+
+## Recent Implementation Highlights
+
+### Function Evaluation (Completed February 2025)
+- Created a general expression evaluator (`src/evaluator.rs`) that handles all expression types
+- Functions are stored in the `ValueRegistry` and evaluated by creating new contexts
+- Full support for:
+  - Function calls with type-checked arguments
+  - Functions calling other functions
+  - Let bindings within function bodies
+  - All arithmetic and boolean operations
+  - Pipeline operations within functions
+- REPL integration allows immediate function testing
 
 ## Phase 1: Value Object Foundation (Weeks 1-4) ✅ COMPLETED
 
@@ -78,7 +100,7 @@ Relic embodies four fundamental principles:
 - [x] Build constructor failure handling with type safety
 - [ ] Add uniqueness constraint checking at construction (syntax supported, implementation pending)
 
-## Phase 2: Parser and Core Language (Weeks 5-8) ✅ MOSTLY COMPLETED
+## Phase 2: Parser and Core Language (Weeks 5-8) ✅ COMPLETED
 
 ### 2.1 Concrete Syntax Design
 - [x] Implement syntax matching design.md examples:
@@ -98,14 +120,23 @@ Relic embodies four fundamental principles:
 - [x] Implement constructor code generation
 - [x] Create type-level proof carrying for valid values
 - [x] Build exhaustive pattern matching on value types
-- [ ] Add value type equality and structural hashing (pending)
+- [x] Add value type equality and structural hashing
 
 ### 2.3 Expression Evaluation
 - [x] Implement pure expression evaluator
 - [x] Add let-binding with value semantics
-- [ ] Create function definitions as pure transformations (pending)
+- [x] Create function definitions as pure transformations
+- [x] Implement Uniform Function Call syntax
 - [x] Build pattern matching with value deconstruction
 - [x] Enforce stratified architecture at language level
+
+### 2.4 Uniform Function Call Syntax ✅ COMPLETED
+- [x] Parse method call syntax `x.f(y)` as `f(x, y)`
+- [x] Support chained method calls `x.f().g().h()`
+- [x] Ensure proper precedence and associativity
+- [x] Make all functions callable with UFC syntax
+- [x] Maintain compatibility with future multiple dispatch
+- [x] Update examples to showcase UFC benefits
 
 ## Phase 3: Multiple Dispatch System (Weeks 9-12)
 
@@ -116,6 +147,7 @@ Based on Julia and CLOS research:
 - [ ] Create compile-time specialization for near-zero overhead
 - [ ] Build method precedence based on type specificity
 - [ ] Add ambiguity detection with clear error messages
+- [ ] Ensure UFC syntax works seamlessly with multiple dispatch
 
 ### 3.2 Dispatch-Based Operations
 - [ ] Implement relational operations via multiple dispatch:
@@ -245,6 +277,18 @@ Inspired by F* and Links:
 
 ## Phase 8: Runtime and Performance (Weeks 29-32)
 
+### Why Sea of Nodes for Relic
+
+The sea of nodes architecture is particularly well-suited for Relic due to several key alignments:
+
+1. **Immutability → SSA**: Relic's immutable values naturally map to Static Single Assignment form
+2. **Parse-Don't-Validate → Clear Dataflow**: Value construction boundaries create explicit dataflow edges
+3. **Functional-Relational → Graph-Based**: Relational operations naturally form dataflow graphs
+4. **Multiple Dispatch → Specialization**: Graph representation enables aggressive type-based optimization
+5. **Effect Boundaries → Node Classification**: Clear separation of pure computation and effects
+
+This architecture will enable Relic to achieve near-zero overhead abstractions while maintaining its high-level guarantees.
+
 ### 8.1 Memory Management
 - [ ] Implement value object pooling
 - [ ] Create zero-copy relation operations
@@ -259,12 +303,50 @@ Inspired by F* and Links:
 - [ ] Build join order optimization
 - [ ] Add incremental view maintenance
 
-### 8.3 Compilation Strategy
-- [ ] Design compilation to efficient C/Rust
-- [ ] Implement whole-program optimization
-- [ ] Create dispatch specialization
-- [ ] Build inlining for small values
-- [ ] Add profile-guided optimization
+### 8.3 Compilation Strategy - Sea of Nodes Architecture
+- [ ] **Phase 1: IR Foundation**
+  - [ ] Design sea of nodes intermediate representation
+  - [ ] Define node types for Relic's features:
+    - Value Construction Nodes (parse boundaries)
+    - Validation Nodes (constraint predicates)
+    - Function Call Nodes (with type specialization)
+    - Dispatch Nodes (for multiple dispatch)
+    - Relation Operation Nodes (joins, projections, etc.)
+    - Control Nodes (pattern matching, conditionals)
+    - Memory Nodes (immutable value storage)
+  - [ ] Implement graph construction from typed AST
+  - [ ] Create graph visualization tools for debugging
+
+- [ ] **Phase 2: Core Optimizations**
+  - [ ] Common subexpression elimination (CSE)
+  - [ ] Dead code elimination (DCE)
+  - [ ] Constant folding and propagation
+  - [ ] Inline expansion for small functions
+  - [ ] Loop-invariant code motion (for relational operations)
+
+- [ ] **Phase 3: Relic-Specific Optimizations**
+  - [ ] Parse-don't-validate inlining:
+    - Inline validation predicates when types are statically known
+    - Eliminate redundant validation checks
+    - Fuse validation and normalization operations
+  - [ ] Multiple dispatch devirtualization:
+    - Specialize dispatch sites based on type information
+    - Create fast paths for common type combinations
+    - Eliminate dispatch overhead for monomorphic calls
+  - [ ] Relational optimization:
+    - Query plan optimization using relational algebra laws
+    - Predicate pushdown through the graph
+    - Join order optimization based on cardinality estimates
+  - [ ] Value type specialization:
+    - Generate specialized code for common value types
+    - Optimize memory layout for cache efficiency
+    - Eliminate boxing for primitive-backed values
+
+- [ ] **Phase 4: Code Generation**
+  - [ ] Initial target: Optimized bytecode interpreter
+  - [ ] LLVM backend for native code generation
+  - [ ] WebAssembly target for browser deployment
+  - [ ] Adaptive optimization with runtime profiling
 
 ## Phase 9: Developer Experience (Weeks 33-36)
 
@@ -364,12 +446,14 @@ Inspired by F* and Links:
 
 ## Immediate Next Steps
 
-### Completing Phase 2 (Days remaining)
+### Phase 2 Complete! ✅
 1. ✅ **Pipeline Operator**: COMPLETED - Functional composition with `|>`
 2. ✅ **Let Bindings**: COMPLETED - Local bindings with `let x = value in expression`
 3. ✅ **Pattern Matching**: COMPLETED - Basic pattern matching with `match expr { Pattern(x) => result }`
-4. 🚧 **Value Equality**: PENDING - Implement proper equality and hashing for value objects
-5. 🔲 **Function Definitions**: PENDING - Pure function transformations
+4. ✅ **Value Equality**: COMPLETED - Implement proper equality and hashing for value objects
+5. ✅ **Function Definitions**: COMPLETED - Pure function transformations with full evaluation
+6. ✅ **Uniform Function Call Syntax**: COMPLETED - Enable `x.f(y)` as sugar for `f(x, y)`
+7. ✅ **Multi-line Comments**: COMPLETED - Support for `/* */` style comments with nesting
 
 ### Starting Phase 3: Multiple Dispatch (3-4 weeks)
 1. **Method Syntax**: Design and implement method declaration syntax

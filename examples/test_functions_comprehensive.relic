@@ -1,0 +1,41 @@
+// Comprehensive function test
+
+// Basic functions
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn sub(x: Int, y: Int) -> Int {
+    x - y
+}
+
+// Function using other functions
+fn quadruple(x: Int) -> Int {
+    double(double(x))
+}
+
+// Function with let binding
+fn complexCalc(x: Int) -> Int {
+    let doubled = x * 2 in
+    let tripled = x * 3 in
+    doubled + tripled  // Returns 5x
+}
+
+// Boolean functions
+fn isPositive(x: Int) -> Bool {
+    x > 0
+}
+
+fn isEven(x: Int) -> Bool {
+    let half = x / 2 in
+    x == half * 2
+}
+
+// String functions
+fn greet(name: String) -> String {
+    name
+}

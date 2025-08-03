@@ -54,6 +54,23 @@ join(r1::HashRelation, r2::SortedRelation) = hash_sort_join(r1, r2)
 
 The research shows this approach can achieve near-zero dispatch overhead through compile-time specialization while enabling unprecedented extensibility.
 
+### Uniform Function Call Syntax with Multiple Dispatch
+
+A key insight is that UFC syntax is purely syntactic sugar that doesn't conflict with multiple dispatch semantics:
+
+```
+// These are semantically identical:
+users.join(orders)                    // UFC syntax
+join(users, orders)                   // Traditional syntax
+
+// Both dispatch based on BOTH argument types:
+// - If users is HashIndexed and orders is Sorted, calls hash_sort_join
+// - If both are Sorted, calls merge_join
+// - etc.
+```
+
+UFC syntax makes relational operations more discoverable and natural to write while preserving the power of multiple dispatch. The syntax transformation is simple: `x.f(y, z)` becomes `f(x, y, z)`, maintaining all dispatch semantics.
+
 ## Prior art synthesis: Type systems and constraints
 
 The research reveals several mature approaches for encoding constraints and relationships at the type level:
@@ -146,6 +163,134 @@ users
   |> where(orderCount > 10)
 ```
 
+With Uniform Function Call (UFC) syntax, the same query becomes even more natural:
+
+```
+users
+  .where(age > 21)
+  .join(orders, on: userId)
+  .group(by: city)
+  .select(city, orderCount: count(), avgAmount: mean(amount))
+  .where(orderCount > 10)
+```
+
+## Uniform Function Call Syntax as a Core Feature
+
+UFC syntax allows any function to be called as a method on its first argument, transforming `f(x, y)` into `x.f(y)`. This syntactic convenience provides several benefits for Relic:
+
+### Enhancing Readability Without Compromising Semantics
+
+```
+// Traditional functional style
+let validated = validate(normalize(trim(input)))
+
+// With UFC - same semantics, better readability
+let validated = input.trim().normalize().validate()
+
+// Relational operations flow naturally
+let results = users
+  .filter(u => u.age > 21)
+  .join(orders, on: (u, o) => u.id == o.userId)
+  .group(by: u => u.city)
+  .select(city, revenue: sum(o => o.amount))
+```
+
+### UFC and Value Objects
+
+UFC makes value object transformations feel natural while maintaining immutability:
+
+```
+// Each operation returns a new value
+let email = rawInput
+  .trim()
+  .toLowerCase()
+  .validateEmail()
+  .normalizeEmail()
+
+// Equivalent to:
+let email = normalizeEmail(validateEmail(toLowerCase(trim(rawInput))))
+```
+
+### UFC with Multiple Dispatch
+
+Critically, UFC doesn't interfere with multiple dispatch - it's purely syntactic:
+
+```
+// Both forms use the same multiple dispatch resolution
+users.join(orders)  // Dispatches on types of both users AND orders
+join(users, orders) // Identical dispatch behavior
+
+// The implementation selected depends on both arguments
+// UFC just provides a more natural way to write it
+```
+
+This means developers get the readability benefits of method chaining while the language maintains the power and flexibility of multiple dispatch for selecting optimal implementations.
+
+## Compilation strategy: Sea of nodes for zero-overhead abstractions
+
+Relic's compilation strategy leverages a sea of nodes intermediate representation to achieve near-zero overhead for its high-level abstractions. This graph-based IR is particularly well-suited to Relic's design principles.
+
+### Why sea of nodes aligns with parse-don't-validate
+
+The parse-don't-validate pattern creates natural boundaries in the dataflow graph:
+
+1. **Value construction nodes** mark where raw data enters the system
+2. **Validation nodes** can be optimized away when types are statically known
+3. **Immutability** means each value has exactly one definition, mapping perfectly to SSA form
+4. **Effect boundaries** are explicit in the graph, enabling aggressive pure code optimization
+
+Example optimization:
+```relic
+// Original code
+fn processEmail(raw: String) -> EmailAddress {
+    EmailAddress(raw.toLowerCase())
+}
+
+// After optimization when called with a literal
+processEmail("USER@EXAMPLE.COM")
+// Validation is proven at compile time, constructor inlined
+// Result: Direct allocation of EmailAddress("user@example.com")
+```
+
+### Multiple dispatch optimization through specialization
+
+The sea of nodes representation enables powerful optimizations for multiple dispatch:
+
+1. **Type flow analysis** tracks concrete types through the graph
+2. **Dispatch nodes** can be replaced with direct calls when types are known
+3. **Speculative optimization** with deoptimization guards for dynamic cases
+4. **Method inlining** across dispatch boundaries
+
+This means Relic can offer the flexibility of multiple dispatch with the performance of static dispatch in most cases.
+
+### Relational operations as graph transformations
+
+Functional-relational operations map naturally to dataflow graphs:
+
+```relic
+users
+  |> where(age > 21)
+  |> join(orders, on: userId)
+  |> select(name, total: sum(amount))
+```
+
+Becomes a graph where:
+- Query optimization is graph transformation
+- Common subexpressions are automatically shared
+- Predicate pushdown is moving nodes in the graph
+- Join ordering is graph topology optimization
+
+### Performance implications
+
+The sea of nodes architecture enables Relic to achieve:
+
+1. **Zero-overhead value types** - Construction and validation optimized away
+2. **Free abstractions** - High-level code compiles to optimal low-level code  
+3. **Predictable performance** - Graph structure makes costs visible
+4. **Adaptive optimization** - Runtime profiling guides specialization
+
+This compilation strategy ensures that Relic's elegant abstractions don't come at the cost of performance, making it suitable for both high-level domain modeling and systems programming.
+
 ## Implementation recommendations
 
 Based on the research, a practical implementation should:
@@ -157,5 +302,6 @@ Based on the research, a practical implementation should:
 5. **Enforce stratified architecture** through language-level separation of concerns
 6. **Include SMT solver integration** for automatic constraint verification
 7. **Support incremental adoption** through interop with existing databases and languages
+8. **Implement UFC syntax** to make functional and relational operations more approachable without sacrificing theoretical purity
 
 The convergence of these ideas - value objects embodying parse-don't-validate, functional-relational programming minimizing complexity, Malloy's intuitive data transformations, and multiple dispatch replacing control flow - creates a compelling vision for a new programming paradigm that is simultaneously more correct, more performant, and more expressive than current approaches.

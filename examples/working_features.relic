@@ -1,0 +1,61 @@
+// This file demonstrates all working features in Relic
+
+// 1. Value type declarations with validation
+value EmailAddress(raw: String) {
+    validate: raw contains "@" && raw.length > 3
+    normalize: raw.toLowerCase()
+}
+
+value Age(value: Int) {
+    validate: value >= 0 && value <= 150
+}
+
+// 2. Let bindings in validation
+value ComplexValue(num: Int) {
+    validate: let doubled = num * 2 in 
+              let tripled = num * 3 in 
+              doubled < 100 && tripled < 150
+}
+
+// 3. Function declarations
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn isPositive(x: Int) -> Bool {
+    x > 0
+}
+
+// 4. Functions with let bindings
+fn complexCalc(x: Int) -> Int {
+    let doubled = x * 2 in
+    let tripled = x * 3 in
+    doubled + tripled
+}
+
+// 5. Functions calling other functions
+fn quadruple(x: Int) -> Int {
+    double(double(x))
+}
+
+// 6. Boolean functions
+fn isEven(x: Int) -> Bool {
+    let half = x / 2 in
+    x == half * 2
+}
+
+// 7. Pattern matching (basic support)
+// Pattern matching syntax is parsed but evaluation is simplified
+
+// 8. Pipeline operator (parsed but requires expression evaluation)
+// Example: 21 |> double |> add(1)
+
+// 9. Comments
+// Single-line comments are fully supported
+
+// 10. Value equality (implemented in the value system)
+// Values can be compared with == and !=

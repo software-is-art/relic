@@ -1,0 +1,10 @@
+// Test pattern matching
+value Status(code: Int) {
+    validate: code >= 0
+}
+
+value Process(status: Status) {
+    validate: match status {
+        Status(c) => c == 200
+    }
+}
