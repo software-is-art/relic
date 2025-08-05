@@ -44,12 +44,18 @@ pub fn evaluate_expression(
         Expression::Literal(Literal::Boolean(b)) => Ok(EvalValue::Boolean(*b)),
         
         Expression::Identifier(name) => {
-            context.get(name).cloned().ok_or_else(|| {
-                Error::Validation(ValidationError {
+            // First check if it's in the context
+            if let Some(value) = context.get(name) {
+                Ok(value.clone())
+            } else if registry.constructors.contains_key(name) {
+                // If it's a type name, return a special value representing the type
+                Ok(EvalValue::String(format!("<type {}>", name)))
+            } else {
+                Err(Error::Validation(ValidationError {
                     message: format!("Unknown identifier: {}", name),
                     value_type: "".to_string(),
-                })
-            })
+                }))
+            }
         }
         
         Expression::Binary(op, left, right) => {
@@ -250,7 +256,11 @@ pub fn evaluate_expression(
                 }
             } else if name == "relationOf" {
                 // Special handling for relationOf
-                evaluate_relation_of(&arg_values)
+                // TODO: Implement relationOf for Type-as-Relation
+                Err(Error::Validation(ValidationError {
+                    message: "relationOf is not yet implemented in Type-as-Relation model".to_string(),
+                    value_type: "function".to_string(),
+                }))
             } else {
                 Err(Error::Validation(ValidationError {
                     message: format!("Unknown function or method: {}", name),
@@ -320,43 +330,103 @@ pub fn evaluate_expression(
         }
         
         Expression::MethodCall(obj, method, args) => {
-            // With unified syntax, check if this is a user-defined function (UFC syntax)
-            if let Some(_functions) = registry.get_functions(method) {
-                // Transform x.f(y, z) into f(x, y, z)
-                let mut full_args = vec![obj.as_ref().clone()];
-                full_args.extend(args.clone());
-                return evaluate_expression(
-                    &Expression::FunctionCall(method.clone(), full_args),
-                    context,
-                    registry,
-                );
-            }
-            
-            // For backward compatibility, check if this is a method
-            if let Some(_methods) = registry.get_methods(method) {
-                // Transform x.f(y, z) into f(x, y, z) for method dispatch
-                let mut full_args = vec![obj.as_ref().clone()];
-                full_args.extend(args.clone());
-                return evaluate_expression(
-                    &Expression::FunctionCall(method.clone(), full_args),
-                    context,
-                    registry,
-                );
-            }
-            
-            // Otherwise, handle built-in methods
-            let obj_val = evaluate_expression(obj, context, registry)?;
-            match (&obj_val, method.as_str()) {
-                (EvalValue::String(s), "toLowerCase") if args.is_empty() => {
-                    Ok(EvalValue::String(s.to_lowercase()))
+            // Check if this is a Type method call (e.g., User.all())
+            if let Expression::Identifier(type_name) = &**obj {
+                // Check if this identifier is a type name in the registry
+                if registry.constructors.contains_key(type_name) {
+                    // Handle Type-as-Relation methods
+                    match method.as_str() {
+                        "all" if args.is_empty() => {
+                            let instances = registry.get_all_instances(type_name);
+                            // Convert instances to EvalValue
+                            // For now, return a string representation
+                            Ok(EvalValue::String(format!("{} instances of {}", instances.len(), type_name)))
+                        }
+                        "count" if args.is_empty() => {
+                            let count = registry.count_instances(type_name);
+                            Ok(EvalValue::Integer(count as i64))
+                        }
+                        _ => Err(Error::Validation(ValidationError {
+                            message: format!("Unknown type method {} or wrong arguments", method),
+                            value_type: type_name.to_string(),
+                        })),
+                    }
+                } else {
+                    // Not a type, check if it's in the context
+                    if context.contains_key(type_name) {
+                        // Continue with normal method evaluation
+                        // With unified syntax, check if this is a user-defined function (UFC syntax)
+                        if let Some(_functions) = registry.get_functions(method) {
+                            // Transform x.f(y, z) into f(x, y, z)
+                            let mut full_args = vec![obj.as_ref().clone()];
+                            full_args.extend(args.clone());
+                            return evaluate_expression(
+                                &Expression::FunctionCall(method.clone(), full_args),
+                                context,
+                                registry,
+                            );
+                        }
+                        
+                        // Otherwise, handle built-in methods
+                        let obj_val = evaluate_expression(obj, context, registry)?;
+                        match (&obj_val, method.as_str()) {
+                            (EvalValue::String(s), "toLowerCase") if args.is_empty() => {
+                                Ok(EvalValue::String(s.to_lowercase()))
+                            }
+                            (EvalValue::String(s), "toUpperCase") if args.is_empty() => {
+                                Ok(EvalValue::String(s.to_uppercase()))
+                            }
+                            _ => Err(Error::Validation(ValidationError {
+                                message: format!("Unknown method {} or wrong arguments", method),
+                                value_type: "".to_string(),
+                            })),
+                        }
+                    } else {
+                        Err(Error::Validation(ValidationError {
+                            message: format!("Unknown identifier: {}", type_name),
+                            value_type: "".to_string(),
+                        }))
+                    }
                 }
-                (EvalValue::String(s), "toUpperCase") if args.is_empty() => {
-                    Ok(EvalValue::String(s.to_uppercase()))
+            } else {
+                // With unified syntax, check if this is a user-defined function (UFC syntax)
+                if let Some(_functions) = registry.get_functions(method) {
+                    // Transform x.f(y, z) into f(x, y, z)
+                    let mut full_args = vec![obj.as_ref().clone()];
+                    full_args.extend(args.clone());
+                    return evaluate_expression(
+                        &Expression::FunctionCall(method.clone(), full_args),
+                        context,
+                        registry,
+                    );
                 }
-                _ => Err(Error::Validation(ValidationError {
-                    message: format!("Unknown method {} or wrong arguments", method),
-                    value_type: "".to_string(),
-                })),
+                
+                // For backward compatibility, check if this is a method
+                if let Some(_methods) = registry.get_methods(method) {
+                    // Transform x.f(y, z) into f(x, y, z) for method dispatch
+                    let mut full_args = vec![obj.as_ref().clone()];
+                    full_args.extend(args.clone());
+                    return evaluate_expression(
+                        &Expression::FunctionCall(method.clone(), full_args),
+                        context,
+                        registry,
+                    );
+                }
+                
+                // Otherwise, handle built-in methods
+                let obj_val = evaluate_expression(obj, context, registry)?;
+                match (&obj_val, method.as_str()) {
+                    (EvalValue::String(s), "toLowerCase") if args.is_empty() => {
+                        Ok(EvalValue::String(s.to_lowercase()))
+                    }
+                    (EvalValue::String(s), "toUpperCase") if args.is_empty() => {
+                        Ok(EvalValue::String(s.to_uppercase()))
+                    }
+                    _ => Err(Error::Validation(ValidationError {
+                        message: format!("Unknown method {} or wrong arguments", method),
+                        value_type: "".to_string(),
+                    })),
+                }
             }
         }
         

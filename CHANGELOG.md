@@ -5,12 +5,43 @@ All notable changes to the Relic programming language will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - Phase 3 In Progress
+## [Unreleased] - Phase 4 In Progress
 
 ### Summary
-Phase 3 (Multiple Dispatch) is now ~98% complete with unified function syntax, full dispatch implementation, parameter guards, and compile-time specialization working.
+Phase 3 (Multiple Dispatch) is 100% complete. Phase 4 (Functional-Relational Core) is now ~50% complete with Type-as-Relation infrastructure implemented and basic type methods working.
 
-### Added (Phase 3)
+### Added (Phase 4 - In Progress)
+- **Type-as-Relation Model**
+  - Revolutionary approach where every value type IS a relation
+  - No special relation syntax needed - relations emerge from types
+  - Automatic instance tracking for all value types
+  - Memory managed with Arc/Weak references
+  
+- **Minimal Built-in Design Decision**
+  - Only `all(t: Type) -> List[t]` will be built-in
+  - All other relational operations implemented in pure Relic
+  - `count(t: Type)` becomes `all(t).length()`
+  - `where(t: Type, pred)` becomes `all(t).filter(pred)`
+  - Maximizes composability and minimizes special cases
+  
+- **Instance Tracking Infrastructure**
+  - ValueRegistry tracks all instances by type name
+  - Instances automatically registered on construction
+  - Weak references allow garbage collection
+  - Dead references cleaned up on access
+  
+- **Current Implementation** (To be refactored)
+  - Type methods work as special cases (temporary)
+  - Will be replaced with minimal built-in approach
+  - Instance tracking infrastructure ready for `all()` implementation
+  
+- **Technical Changes**
+  - `ValueRegistry::construct()` now returns `Arc<dyn ValueObject>`
+  - Added instance tracking to ValueRegistry
+  - Designed minimal built-in approach
+  - Planning removal of all special-case handling
+
+### Added (Phase 3 - Complete)
 - **Unified Function Syntax**
   - `method` keyword now treated as alias for `fn`
   - All functions can have multiple implementations
@@ -59,9 +90,19 @@ Phase 3 (Multiple Dispatch) is now ~98% complete with unified function syntax, f
   - `HashMap<String, Vec<FunctionType>>` for all functions
   - Automatic dispatch strategy selection
   
+### To Do (Phase 4 Remaining)
+- Implement `Type.where(predicate)` for filtering instances
+- Implement `Type.find(predicate)` for finding single instance
+- Add support for key and unique constraints
+- Implement joins between types
+- Add aggregation functions (sum, avg, etc.)
+- Create list/collection types for query results
+- Add indexing for efficient queries
+- Implement optimized evaluator support for type methods
+- Write comprehensive tests for Type-as-Relation
+- Update all examples with Type-as-Relation patterns
+
 ### To Do (Phase 3 Remaining)
-- ~~Implement parameter guard evaluation in dispatch~~ ✅ COMPLETED
-- ~~Add compile-time specialization for performance~~ ✅ COMPLETED
 - Complete member access for multi-field value types
 - Add runtime dispatch caching (optional optimization)
 - Update documentation and create migration guide

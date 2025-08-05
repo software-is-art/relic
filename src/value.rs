@@ -4,6 +4,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::fmt::{Debug, Display};
+use std::sync::{Arc, RwLock, Weak};
 
 pub trait ValueObject: Any + Send + Sync + Debug + Display {
     fn validate(&self) -> Result<()>;
@@ -22,9 +23,11 @@ pub struct ValueConstructor {
 }
 
 pub struct ValueRegistry {
-    constructors: HashMap<String, ValueConstructor>,
+    pub(crate) constructors: HashMap<String, ValueConstructor>,
     // Unified storage: all functions can have multiple implementations
     functions: HashMap<String, Vec<FunctionDeclaration>>,
+    // Type-as-Relation: Track all instances by type name
+    instances: Arc<RwLock<HashMap<String, Vec<Weak<dyn ValueObject>>>>>,
 }
 
 impl ValueRegistry {
@@ -32,6 +35,7 @@ impl ValueRegistry {
         Self {
             constructors: HashMap::new(),
             functions: HashMap::new(),
+            instances: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -93,7 +97,7 @@ impl ValueRegistry {
         &self,
         type_name: &str,
         input: Box<dyn Any + Send + Sync>,
-    ) -> Result<Box<dyn ValueObject>> {
+    ) -> Result<Arc<dyn ValueObject>> {
         let constructor = self.constructors.get(type_name).ok_or_else(|| {
             Error::Validation(ValidationError {
                 message: format!("Unknown value type: {}", type_name),
@@ -106,8 +110,58 @@ impl ValueRegistry {
 
         // Create the value object
         let value = self.create_value_object(type_name, input)?;
+        let value_arc = Arc::from(value);
 
-        Ok(value)
+        // Register the instance for Type-as-Relation
+        self.register_instance(type_name, Arc::downgrade(&value_arc));
+
+        Ok(value_arc)
+    }
+
+    fn register_instance(&self, type_name: &str, instance: Weak<dyn ValueObject>) {
+        if let Ok(mut instances) = self.instances.write() {
+            instances.entry(type_name.to_string())
+                .or_insert_with(Vec::new)
+                .push(instance);
+        }
+    }
+
+    // Type-as-Relation query methods
+    pub fn get_all_instances(&self, type_name: &str) -> Vec<Arc<dyn ValueObject>> {
+        if let Ok(instances) = self.instances.read() {
+            if let Some(type_instances) = instances.get(type_name) {
+                // Filter out dropped instances and upgrade weak references
+                let mut strong_refs = Vec::new();
+                let mut indices_to_remove = Vec::new();
+                
+                for (i, weak) in type_instances.iter().enumerate() {
+                    if let Some(strong) = weak.upgrade() {
+                        strong_refs.push(strong);
+                    } else {
+                        indices_to_remove.push(i);
+                    }
+                }
+                
+                // Clean up dead references if any were found
+                if !indices_to_remove.is_empty() {
+                    drop(instances); // Release read lock
+                    if let Ok(mut instances) = self.instances.write() {
+                        if let Some(type_instances) = instances.get_mut(type_name) {
+                            for &i in indices_to_remove.iter().rev() {
+                                type_instances.remove(i);
+                            }
+                        }
+                    }
+                }
+                
+                return strong_refs;
+            }
+        }
+        Vec::new()
+    }
+
+    pub fn count_instances(&self, type_name: &str) -> usize {
+        self.get_all_instances(type_name).len()
     }
 
     fn create_value_object(

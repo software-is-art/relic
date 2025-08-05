@@ -7,7 +7,7 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
 ✅ **Phase 2 COMPLETED**: Parser, lexer, and basic language features (100% complete)
 ✅ **Phase 3 COMPLETED**: Multiple dispatch system (100% complete)
-🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~30% complete) - Type-as-Relation model
+🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~50% complete) - Type-as-Relation implemented!
 🔲 **Phases 5-10**: Future work
 
 ### What's Working Now
@@ -26,15 +26,19 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - **Multiple dispatch system with type-based precedence**
 - **Unified function syntax (`method` as alias for `fn`)**
 - **UFC syntax works with multiple dispatch**
+- **Type-as-Relation: automatic instance tracking for all value types**
+- **Type methods: User.count(), User.all() working in REPL**
 - Comprehensive test suite and examples
 
 ### Recent Additions (February 2025)
 - ✅ **Type-as-Relation Model** - Revolutionary approach where types ARE relations
-- ✅ Designed architecture where every value type tracks its instances
-- ✅ No special relation syntax - relations emerge from the type system
-- ✅ Perfect alignment with sea of nodes compiler architecture
+- ✅ Implemented automatic instance tracking for all value types
+- ✅ ValueRegistry tracks instances using Arc/Weak references for memory management
+- ✅ **New Design Decision**: Minimal built-in approach - only `all(t: Type)` is built-in
+- ✅ All other relational operations (count, where, find) will be pure Relic functions
+- ✅ This approach maximizes composability and minimizes special cases
+- ✅ Perfect alignment with functional programming and sea of nodes architecture
 - ✅ Updated design documents (PHASE_4_STATUS.md, RELATIONS_AS_VALUES.md, DESIGN.md)
-- ✅ Type-level query methods: `Type.all()`, `Type.where()`, `Type.find()`
 
 ### Previously Completed Features
 - ✅ Multiple dispatch with type-based precedence and compile-time optimization
@@ -196,7 +200,7 @@ Based on Julia and CLOS research:
 - [ ] Create specialized implementations per type combination
 - [ ] Build performance profiling for dispatch overhead
 
-## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~30% COMPLETE
+## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~50% COMPLETE
 
 ### 4.1 Type-as-Relation Architecture ✅ REVOLUTIONARY APPROACH
 Every value type implicitly forms a relation of its instances:
@@ -207,18 +211,25 @@ Every value type implicitly forms a relation of its instances:
 - [x] Perfect alignment with sea of nodes architecture
 - [x] Updated all design documentation
 
-### 4.2 Instance Tracking Infrastructure
-- [ ] Modify ValueRegistry to track instances by type
-- [ ] Add instance registration during value construction
-- [ ] Implement memory management (strong vs weak references)
+### 4.2 Instance Tracking Infrastructure ✅ IMPLEMENTED
+- [x] Modified ValueRegistry to track instances by type
+- [x] Added instance registration during value construction
+- [x] Implemented memory management using Arc/Weak references
+- [x] Automatic cleanup of dropped instances
 - [ ] Handle key and unique constraint validation
 - [ ] Efficient indexing for queries
 
-### 4.3 Type-Level Query Methods
-- [x] Design type methods: `all()`, `where()`, `find()`, `count()`
-- [ ] Implement type method evaluation in evaluator
-- [ ] Support for type identifiers in expressions
-- [ ] UFC syntax with type methods:
+### 4.3 Minimal Built-in Approach 🚧 IN PROGRESS
+- [x] Design minimal built-in approach: only `all(t: Type)` is built-in
+- [ ] Add `Type` as a first-class type in the type system
+- [ ] Implement `all(t: Type) -> List[t]` as the single built-in
+- [ ] Create minimal List type with essential methods
+- [ ] Remove special-case type method handling from evaluator/typechecker
+- [ ] Implement standard library functions in pure Relic:
+  - `count(t: Type) -> Int { all(t).length() }`
+  - `where(t: Type, pred) -> List[t] { all(t).filter(pred) }`
+  - `find(t: Type, pred) -> Option[t] { all(t).find(pred) }`
+- [x] UFC syntax naturally handles type methods:
   ```relic
   // Define value type - automatically creates relation
   value User(id: Int, name: String, email: String) {

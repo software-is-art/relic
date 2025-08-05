@@ -1,0 +1,12 @@
+// Type-as-Relation Example
+// Every value type automatically forms a relation of its instances
+
+// Define a simple User type
+value User(name: String) {
+    validate: name.length > 0
+}
+
+// More type queries will be available soon:
+// User.all()     - Get all User instances
+// User.where(u => u.name contains "A")  - Filter instances
+// User.find(u => u.name == "Alice")     - Find single instance

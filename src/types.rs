@@ -99,4 +99,8 @@ impl TypeEnvironment {
         // For backward compatibility during transition
         None
     }
+    
+    pub fn is_type_name(&self, name: &str) -> bool {
+        self.values.contains_key(name)
+    }
 }

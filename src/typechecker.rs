@@ -274,11 +274,20 @@ impl TypeChecker {
                 Literal::Boolean(_) => Ok(Type::Bool),
             },
 
-            Expression::Identifier(name) => self.locals.get(name).cloned().ok_or_else(|| {
-                Error::Type(TypeError {
-                    message: format!("Undefined identifier: {}", name),
-                })
-            }),
+            Expression::Identifier(name) => {
+                // First check locals
+                if let Some(ty) = self.locals.get(name) {
+                    Ok(ty.clone())
+                } else if self.env.is_type_name(name) {
+                    // If it's a type name, return a special Type for it
+                    // For now, we'll treat it as a string type
+                    Ok(Type::String)
+                } else {
+                    Err(Error::Type(TypeError {
+                        message: format!("Undefined identifier: {}", name),
+                    }))
+                }
+            },
 
             Expression::FunctionCall(name, args) => {
                 // With unified syntax, all functions can have multiple implementations
@@ -393,6 +402,22 @@ impl TypeChecker {
             }
 
             Expression::MethodCall(object, method, args) => {
+                // Check if this is a Type method call (e.g., User.all())
+                if let Expression::Identifier(type_name) = &**object {
+                    if self.env.is_type_name(type_name) {
+                        // Handle Type-as-Relation methods
+                        match method.as_str() {
+                            "all" if args.is_empty() => return Ok(Type::String), // TODO: Return list type
+                            "count" if args.is_empty() => return Ok(Type::Int),
+                            "where" if args.len() == 1 => return Ok(Type::String), // TODO: Return list type
+                            "find" if args.len() == 1 => return Ok(Type::Value(type_name.clone())),
+                            _ => return Err(Error::Type(TypeError {
+                                message: format!("Unknown type method {} or wrong arguments", method),
+                            })),
+                        }
+                    }
+                }
+                
                 // Get the object type first
                 let object_type = self.check_expression(object)?;
                 
