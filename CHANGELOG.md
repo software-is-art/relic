@@ -8,15 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - Phase 3 In Progress
 
 ### Summary
-Phase 3 (Multiple Dispatch) is now ~40% complete with method declaration parsing implemented.
+Phase 3 (Multiple Dispatch) is now ~90% complete with unified function syntax and full dispatch implementation.
 
 ### Added (Phase 3)
-- **Method Declarations**
-  - New `method` keyword for multiple dispatch
-  - Support for parameter guards with `where` clauses
+- **Unified Function Syntax**
+  - `method` keyword now treated as alias for `fn`
+  - All functions can have multiple implementations
+  - Automatic dispatch based on number of implementations
+  - Backward compatible - existing code continues to work
+  
+- **Multiple Dispatch System**
+  - Functions dispatch on ALL argument types (not just first)
+  - Type-based precedence rules (concrete types > Any)
+  - Compile-time ambiguity detection
+  - Runtime dispatch with specificity scoring
+  - Single implementation = direct call (optimized)
+  - Multiple implementations = dispatch table
+  
+- **UFC Integration**
+  - Uniform Function Call syntax works with multiple dispatch
+  - Method chaining fully supported
+  - `x.f(y)` correctly dispatches based on types of x and y
+  
+- **Type System Enhancements**
+  - Unified function storage in TypeEnvironment
+  - Functions automatically collected by name
+  - Type checker validates no duplicate signatures
+  
+- **Implementation Details**
+  - Parameter guards with `where` clauses (parsed, not yet evaluated)
   - `Any` type for generic dispatch
-  - AST, parser, and type checker support
-  - Method storage in compiler registry
+  - Member access for value types (partial support)
+
+### Changed
+- **Parser Architecture**
+  - Simplified to treat `method` as alias for `fn`
+  - Both keywords produce identical AST nodes
+  
+- **Storage Architecture**
+  - Functions and methods now use unified storage
+  - `HashMap<String, Vec<FunctionType>>` for all functions
+  - Automatic dispatch strategy selection
+  
+### To Do (Phase 3 Remaining)
+- Implement parameter guard evaluation in dispatch
+- Add compile-time specialization for performance
+- Complete member access for multi-field value types
 
 ## [0.2.0] - 2025-02-10
 
