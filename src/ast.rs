@@ -93,58 +93,6 @@ pub enum Expression {
     Pipeline(Box<Expression>, Box<Expression>),
     Let(String, Box<Expression>, Box<Expression>), // let name = value in body
     Match(Box<Expression>, Vec<MatchArm>),
-    
-    // Relational operations
-    Query(Box<QueryExpression>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum QueryExpression {
-    Relation(String),                          // Base relation
-    Where(Box<QueryExpression>, Expression),   // Filter
-    Select(Box<QueryExpression>, Vec<SelectItem>), // Projection
-    Join {
-        left: Box<QueryExpression>,
-        right: Box<QueryExpression>,
-        on: Expression,
-    },
-    Group {
-        source: Box<QueryExpression>,
-        by: Vec<String>,
-        aggregates: Vec<AggregateItem>,
-    },
-    Sort {
-        source: Box<QueryExpression>,
-        by: Vec<SortItem>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SelectItem {
-    Field(String),
-    Expression(String, Expression), // alias, expression
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AggregateItem {
-    pub name: String,
-    pub function: AggregateFunction,
-    pub field: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum AggregateFunction {
-    Count,
-    Sum,
-    Avg,
-    Min,
-    Max,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SortItem {
-    pub field: String,
-    pub descending: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

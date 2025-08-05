@@ -35,6 +35,7 @@ impl Parser {
         match &self.current_token {
             Token::Value => Ok(Declaration::Value(self.parse_value_declaration()?)),
             Token::Fn => Ok(Declaration::Function(self.parse_function_declaration()?)),
+            Token::Relation => Ok(Declaration::Relation(self.parse_relation_declaration()?)),
             Token::Method => {
                 // Treat 'method' as an alias for 'fn' - parse it as a function
                 self.advance()?; // consume 'method' token
@@ -164,6 +165,71 @@ impl Parser {
             parameters,
             return_type,
             body,
+        })
+    }
+
+    fn parse_relation_declaration(&mut self) -> Result<RelationDeclaration> {
+        self.expect(Token::Relation)?;
+        let name = self.expect_identifier()?;
+        self.expect(Token::LeftBrace)?;
+        
+        let mut fields = Vec::new();
+        let mut constraints = Vec::new();
+        
+        // Parse fields and constraints
+        while self.current_token != Token::RightBrace {
+            // Check if this is a constraint (key, foreign, unique)
+            match &self.current_token {
+                Token::Key => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    let field_name = self.expect_identifier()?;
+                    constraints.push(RelationConstraint::Key(vec![field_name]));
+                }
+                Token::Foreign => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    let field_name = self.expect_identifier()?;
+                    self.expect(Token::References)?;
+                    let target_relation = self.expect_identifier()?;
+                    self.expect(Token::Dot)?;
+                    let target_field = self.expect_identifier()?;
+                    constraints.push(RelationConstraint::Foreign {
+                        field: field_name,
+                        references_relation: target_relation,
+                        references_field: target_field,
+                    });
+                }
+                Token::Unique => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    let field_name = self.expect_identifier()?;
+                    constraints.push(RelationConstraint::Unique(vec![field_name]));
+                }
+                _ => {
+                    // Parse field declaration
+                    let field_name = self.expect_identifier()?;
+                    self.expect(Token::Colon)?;
+                    let field_type = self.parse_type()?;
+                    fields.push(RelationField {
+                        name: field_name,
+                        ty: field_type,
+                    });
+                }
+            }
+            
+            // Handle comma or newline separator
+            if self.current_token == Token::Comma {
+                self.advance()?;
+            }
+        }
+        
+        self.expect(Token::RightBrace)?;
+        
+        Ok(RelationDeclaration {
+            name,
+            fields,
+            constraints,
         })
     }
 
@@ -376,7 +442,39 @@ impl Parser {
             match &self.current_token {
                 Token::Dot => {
                     self.advance()?;
-                    let member = self.expect_identifier()?;
+                    // Allow query keywords as method names
+                    let member = match &self.current_token {
+                        Token::Identifier(name) => {
+                            let n = name.clone();
+                            self.advance()?;
+                            n
+                        }
+                        Token::Where => {
+                            self.advance()?;
+                            "where".to_string()
+                        }
+                        Token::Select => {
+                            self.advance()?;
+                            "select".to_string()
+                        }
+                        Token::Join => {
+                            self.advance()?;
+                            "join".to_string()
+                        }
+                        Token::Group => {
+                            self.advance()?;
+                            "group".to_string()
+                        }
+                        Token::Sort => {
+                            self.advance()?;
+                            "sort".to_string()
+                        }
+                        _ => return Err(Error::Parser(ParserError {
+                            message: format!("Expected method name after '.', found {:?}", self.current_token),
+                            line: self.line,
+                            column: self.column,
+                        })),
+                    };
 
                     if self.current_token == Token::LeftParen {
                         self.advance()?;
@@ -394,6 +492,7 @@ impl Parser {
                         }
 
                         self.expect(Token::RightParen)?;
+                        // Treat all method calls uniformly
                         expr = Expression::MethodCall(Box::new(expr), member, args);
                     } else {
                         expr = Expression::MemberAccess(Box::new(expr), member);
@@ -805,4 +904,89 @@ mod tests {
             _ => panic!("Expected value declaration")
         }
     }
+
+    #[test]
+    fn test_relation_declaration() {
+        let input = "relation Users {
+            id: Int,
+            email: String,
+            age: Int
+            
+            key: id
+            unique: email
+        }";
+        
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer).unwrap();
+        let program = parser.parse_program().unwrap();
+        
+        assert_eq!(program.declarations.len(), 1);
+        match &program.declarations[0] {
+            Declaration::Relation(r) => {
+                assert_eq!(r.name, "Users");
+                assert_eq!(r.fields.len(), 3);
+                
+                // Check fields
+                assert_eq!(r.fields[0].name, "id");
+                assert_eq!(r.fields[0].ty, Type::Int);
+                assert_eq!(r.fields[1].name, "email");
+                assert_eq!(r.fields[1].ty, Type::String);
+                assert_eq!(r.fields[2].name, "age");
+                assert_eq!(r.fields[2].ty, Type::Int);
+                
+                // Check constraints
+                assert_eq!(r.constraints.len(), 2);
+                match &r.constraints[0] {
+                    RelationConstraint::Key(fields) => {
+                        assert_eq!(fields, &vec!["id".to_string()]);
+                    }
+                    _ => panic!("Expected key constraint")
+                }
+                match &r.constraints[1] {
+                    RelationConstraint::Unique(fields) => {
+                        assert_eq!(fields, &vec!["email".to_string()]);
+                    }
+                    _ => panic!("Expected unique constraint")
+                }
+            }
+            _ => panic!("Expected relation declaration")
+        }
+    }
+
+    #[test]
+    fn test_relation_with_foreign_key() {
+        let input = "relation Orders {
+            id: Int,
+            userId: Int,
+            total: Float
+            
+            key: id
+            foreign: userId references Users.id
+        }";
+        
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer).unwrap();
+        let program = parser.parse_program().unwrap();
+        
+        assert_eq!(program.declarations.len(), 1);
+        match &program.declarations[0] {
+            Declaration::Relation(r) => {
+                assert_eq!(r.name, "Orders");
+                assert_eq!(r.fields.len(), 3);
+                assert_eq!(r.constraints.len(), 2);
+                
+                // Check foreign key constraint
+                match &r.constraints[1] {
+                    RelationConstraint::Foreign { field, references_relation, references_field } => {
+                        assert_eq!(field, "userId");
+                        assert_eq!(references_relation, "Users");
+                        assert_eq!(references_field, "id");
+                    }
+                    _ => panic!("Expected foreign key constraint")
+                }
+            }
+            _ => panic!("Expected relation declaration")
+        }
+    }
+
 }

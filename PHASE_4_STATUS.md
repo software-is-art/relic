@@ -3,39 +3,41 @@
 ## Overview
 Phase 4 introduces the functional-relational programming paradigm to Relic, implementing relations as the sole storage for essential state following the "Out of the Tar Pit" architecture.
 
+## Major Design Change: Pure Functional Approach
+After analysis, we've decided to implement relations as regular values and query operations as normal functions, leveraging Relic's existing features (UFC, multiple dispatch) instead of adding special parser support. This aligns better with Relic's philosophy of functional composition.
+
 ## Summary
-Phase 4 is **~10% complete** - AST infrastructure is in place. This phase will establish relations as first-class citizens in Relic, enabling type-safe relational operations with value objects.
+Phase 4 is **~15% complete** - Relation schema declarations are parsed, and we've refactored to remove special query syntax in favor of pure functional composition.
 
 ### Completed So Far
-- ✅ Added relation keywords to lexer (`relation`, `select`, `join`, `group`, `sort`, `on`, `by`, `key`, `foreign`, `references`)
+- ✅ Added relation keywords to lexer (`relation`, `key`, `foreign`, `references`, `unique`)
 - ✅ Created AST nodes for relation declarations (`RelationDeclaration`, `RelationField`, `RelationConstraint`)
-- ✅ Created AST nodes for relational queries (`QueryExpression`, `SelectItem`, `AggregateItem`, etc.)
-- ✅ Added placeholder implementations in compiler, evaluator, type checker, and specialization
-- ✅ Project builds successfully with all Phase 4 infrastructure
+- ✅ Implemented parser for relation schema declarations
+- ✅ **Removed special query syntax** - queries will be regular function calls
+- ✅ Updated examples to show functional approach to queries
+- ✅ Project builds successfully with simplified architecture
 
 ## Planned Tasks 📋
 
-### 1. Essential State as Relations
-- [x] Design relation type syntax with value object schemas
-- [ ] Implement relations as sole storage for essential state
-- [ ] Create relation types with value object schemas
+### 1. Relation Values and Storage
+- [x] Design relation schema syntax
+- [ ] Implement Relation as a value type
+- [ ] Create in-memory storage backend for relations
 - [ ] Build immutable fact storage (inspired by Datomic)
-- [ ] Add time-based queries for historical data
-- [ ] Enforce user-input data only in essential state
+- [ ] Add temporal tracking to all facts
+- [ ] Create relation constructor functions
 
-### 2. Relational Algebra with Value Types
-- [ ] Implement type-safe relational operations
-- [ ] Add Malloy-inspired source modeling:
+### 2. Query Operations as Functions
+- [ ] Implement core query functions using multiple dispatch:
   ```relic
-  users 
-    |> where(age > 21)
-    |> join(orders, on: userId)
-    |> group(by: city)
-    |> select(city, orderCount: count())
+  fn where(rel: Relation, predicate: Expression) -> Relation { ... }
+  fn select(rel: Relation, fields: List) -> Relation { ... }
+  fn join(left: Relation, right: Relation, on: Expression) -> Relation { ... }
   ```
-- [ ] Create relationship-aware computing to prevent fan traps
-- [ ] Build composable query blocks as first-class values
-- [ ] Add automatic optimization based on value types
+- [ ] Leverage UFC for natural query syntax
+- [ ] Use multiple dispatch for optimization based on relation types
+- [ ] Create composable query operations
+- [ ] Build standard library of query functions
 
 ### 3. Type-Level Relationships
 - [ ] Encode relationships through type dependencies:
@@ -51,47 +53,27 @@ Phase 4 is **~10% complete** - AST infrastructure is in place. This phase will e
 - [ ] Create inference for transitive relationships
 
 ### 4. Complete Relational Operations
+All operations will be implemented as regular functions, not special syntax:
 
 #### MVP Operations (implement first)
-- [ ] `where` - Filter rows based on predicates
-- [ ] `select` - Project specific columns
-- [ ] `join` - Inner join relations
-- [ ] `limit` - Restrict result size
+- [ ] `fn where(rel: Relation, pred: Expression) -> Relation`
+- [ ] `fn select(rel: Relation, fields: List) -> Relation`
+- [ ] `fn join(left: Relation, right: Relation, on: Expression) -> Relation`
+- [ ] `fn limit(rel: Relation, n: Int) -> Relation`
 
 #### Essential Operations (implement second)
-- [ ] `distinct` - Remove duplicate rows
-- [ ] `union` - Combine relations (same schema)
-- [ ] `group` - Group by columns with aggregations
-- [ ] `sort` - Order results by columns
-- [ ] `offset` - Skip rows for pagination
-
-#### Set Operations
-- [ ] `intersect` - Common rows between relations
-- [ ] `difference` - Rows in first but not second relation
-- [ ] `unionAll` - Union without removing duplicates
-
-#### Advanced Join Operations
-- [ ] `leftJoin` - Include all rows from left relation
-- [ ] `rightJoin` - Include all rows from right relation
-- [ ] `fullJoin` - Include all rows from both relations
-- [ ] `naturalJoin` - Join on common column names
-- [ ] `semiJoin` - Rows from left that have match in right
-- [ ] `antiJoin` - Rows from left that have no match in right
-
-#### Temporal Operations (first-class support)
-- [ ] `asOf` - Query state at specific timestamp
-- [ ] `history` - View all versions of an entity
-- [ ] `between` - Query state between timestamps
-- [ ] `validTime` - Query based on valid time
-- [ ] `transactionTime` - Query based on transaction time
+- [ ] `fn distinct(rel: Relation) -> Relation`
+- [ ] `fn union(rel1: Relation, rel2: Relation) -> Relation`
+- [ ] `fn group(rel: Relation, by: List) -> GroupedRelation`
+- [ ] `fn sort(rel: Relation, by: List) -> Relation`
+- [ ] `fn offset(rel: Relation, n: Int) -> Relation`
 
 #### Aggregation Functions
-- [ ] `count` - Count rows
-- [ ] `sum` - Sum numeric values
-- [ ] `avg` - Average numeric values
-- [ ] `min` - Minimum value
-- [ ] `max` - Maximum value
-- [ ] Custom aggregates via multiple dispatch
+- [ ] `fn count(grouped: GroupedRelation) -> Relation`
+- [ ] `fn sum(grouped: GroupedRelation, field: String) -> Relation`
+- [ ] `fn avg(grouped: GroupedRelation, field: String) -> Relation`
+- [ ] `fn min(grouped: GroupedRelation, field: String) -> Relation`
+- [ ] `fn max(grouped: GroupedRelation, field: String) -> Relation`
 
 ### 5. Integration with Existing Features
 - [ ] Ensure relations work with value types
@@ -100,79 +82,32 @@ Phase 4 is **~10% complete** - AST infrastructure is in place. This phase will e
 - [ ] Integrate with pattern matching
 - [ ] Support pipeline operator for query composition
 
-## Relic's Relational Algebra Principles
+## Design Philosophy: Relations as Values
 
-Relic's relational algebra is designed from first principles, leveraging the language's unique features:
+The key insight is that relations should be implemented as regular Relic values, with query operations as normal functions. This approach:
 
-1. **Pure Functional Operations** - All relational operations are pure functions that return new relations without modifying existing ones. This enables:
-   - Time-travel queries by preserving all states
-   - Safe concurrent operations
-   - Easy reasoning about query behavior
+1. **Maintains Language Consistency** - Everything uses the same mechanisms (values, functions, UFC)
+2. **Enables User Extensions** - Users can define custom query operations
+3. **Leverages Multiple Dispatch** - Different relation types can have optimized implementations
+4. **Simplifies the Parser** - No special syntax rules needed
+5. **Promotes Composability** - Queries are just function compositions
 
-2. **UFC Syntax for Natural Query Flow** - Queries read naturally left-to-right:
-   ```relic
-   users
-     .where(age > 21)
-     .join(orders)
-     .select(name, totalSpent: sum(amount))
-     .sort(totalSpent.desc())
-   ```
+Example of how it works:
+```relic
+// Relations are values
+value Relation(data: InternalRelationData) {
+    // Internal storage implementation
+}
 
-3. **Multiple Dispatch for Extensibility** - Operations dispatch on relation types:
-   ```relic
-   // Optimized joins based on relation storage
-   fn join(r1: HashIndexedRelation, r2: SortedRelation) -> Relation {
-     // Use hash join algorithm
-   }
-   
-   // Custom aggregates via multiple dispatch
-   fn aggregate(data: Relation, op: MedianOp) -> Float {
-     // User-defined median calculation
-   }
-   ```
+// Query operations are functions with multiple dispatch
+fn where(rel: Relation, predicate: Expression) -> Relation {
+    // Filter implementation
+}
 
-4. **Value Types Throughout** - No NULL values; use value types and pattern matching:
-   ```relic
-   // Instead of NULL, use value types
-   value OptionalAge = Some(Int) | None
-   
-   users
-     .select(name, age: OptionalAge)
-     .where(age matches Some(n) where n > 21)
-   ```
-
-5. **Temporal as First-Class** - Time is built into the relational model:
-   ```relic
-   // All relations automatically track history
-   users.asOf("2024-01-01")
-   users.history().where(field == "email")
-   
-   // Bitemporal queries combine valid and transaction time
-   orders
-     .validAt("2024-01-01")
-     .transactedBefore("2024-01-15")
-   ```
-
-6. **Composability via Pipelines** - All operations compose seamlessly:
-   ```relic
-   let activeUsers = users.where(active == true)
-   let recentOrders = orders.where(date > lastMonth)
-   
-   activeUsers
-     |> join(recentOrders)
-     |> group(by: userId)
-     |> having(count() > 5)
-   ```
-
-7. **Type-Safe Schema Evolution** - Relations evolve with type safety:
-   ```relic
-   // Migrations are type transformations
-   relation UsersV2 extends UsersV1 {
-     phoneNumber: PhoneNumber  // New field with value type
-     
-     migrate: phoneNumber = PhoneNumber.unknown()
-   }
-   ```
+// UFC makes it natural
+users.where(age > 21).select([name, email])
+// Desugars to: select(where(users, age > 21), [name, email])
+```
 
 ## Design Decisions
 
@@ -202,36 +137,36 @@ relation Orders {
 ```
 
 ### Query Syntax
-Queries leverage UFC syntax and pipeline operators for natural composition:
+Queries are just function calls with UFC syntax:
 
 ```relic
-// Simple query with UFC
+// Simple query - just a function call
 users.where(age > 21)
 
-// Equivalent using pipeline
-users |> where(age > 21)
-
-// Complex query combining UFC and pipelines
+// Chaining - natural with UFC
 users
   .where(city == "New York")
-  .join(orders, on: users.id == orders.userId)
-  .group(by: email)
-  .select(email, totalSpent: sum(total))
-  .sort(totalSpent.desc())
-  .limit(10)
+  .where(age >= 21)
+  .select([name, email])
 
-// Multiple dispatch enables custom operations
-users
-  .where(age > 21)
-  .mapValues(normalizeEmail)  // Custom function via dispatch
-  .distinct()
+// Pipeline operator also works
+users |> where(age > 21) |> select([name])
 
-// Temporal queries are natural
-users
-  .asOf(yesterday)
-  .where(status == "active")
-  .history()
-  .select(email, status, validFrom, validTo)
+// Multiple dispatch optimizes based on types
+fn join(h: HashRelation, s: SortedRelation) -> Relation {
+    // Use hash join algorithm
+}
+
+fn join(s1: SortedRelation, s2: SortedRelation) -> Relation {
+    // Use merge join algorithm
+}
+
+// Users can define custom operations
+fn topN(rel: Relation, n: Int, by: String) -> Relation {
+    rel.sort([by]).limit(n)
+}
+
+users.topN(10, "score")
 ```
 
 ### Immutability and Time
@@ -274,29 +209,30 @@ This temporal model enables:
 
 ## Implementation Strategy
 
-### Phase 4.1: Core Infrastructure (Weeks 1-2)
-1. Design and implement relation type AST nodes
-2. Extend parser to handle relation declarations
-3. Create basic relation storage mechanism
-4. Implement simple where/select operations
+### Phase 4.1: Core Infrastructure (Current)
+1. ✅ Design and implement relation declaration AST nodes
+2. ✅ Extend parser to handle relation declarations
+3. ✅ Refactor to pure functional approach (no special query syntax)
+4. [ ] Create Relation value type
+5. [ ] Build in-memory storage mechanism
 
-### Phase 4.2: Advanced Operations (Weeks 3-4)
-1. Implement join operations with type safety
-2. Add grouping and aggregation functions
-3. Create query optimizer for basic operations
-4. Support sorting and pagination
+### Phase 4.2: Basic Query Operations
+1. [ ] Implement `where` and `select` functions
+2. [ ] Add UFC support for natural syntax
+3. [ ] Create basic join operation
+4. [ ] Test query composition
 
-### Phase 4.3: Time and History (Week 5)
-1. Add temporal aspects to relations
-2. Implement asOf queries
-3. Create history tracking
-4. Build transaction support
+### Phase 4.3: Advanced Operations
+1. [ ] Add grouping and aggregation functions
+2. [ ] Implement sorting and pagination
+3. [ ] Use multiple dispatch for optimization
+4. [ ] Build query performance tests
 
-### Phase 4.4: Integration and Testing (Week 6)
-1. Integrate with existing type system
-2. Ensure multiple dispatch works with relations
-3. Create comprehensive test suite
-4. Document all features
+### Phase 4.4: Temporal Support
+1. [ ] Add temporal tracking to all facts
+2. [ ] Implement asOf queries
+3. [ ] Create history functions
+4. [ ] Build transaction support
 
 ## Design Advantages
 
@@ -325,47 +261,39 @@ Relic's pure relational algebra design avoids common pitfalls:
 ## Current Status
 
 ### What's Working
-- Lexer recognizes all relation keywords
-- AST structures for relations and queries defined
-- Placeholder implementations allow project to build
-- Basic infrastructure for Phase 4 is ready
+- ✅ Lexer recognizes relation keywords
+- ✅ Relation declaration parser implemented and tested
+- ✅ Simplified architecture - queries are just function calls
+- ✅ Examples updated to show functional approach
+- ✅ Project builds successfully
 
-### In Progress
-- Parser implementation for relation declarations
-- In-memory storage design for relations
-
-### Blocked
-- None
-
-## Next Steps
-
-1. ~~**Create relation AST nodes** - Define AST structures for relation declarations and queries~~ ✅ COMPLETED
-2. ~~**Extend lexer** - Add keywords: `relation`, `where`, `select`, `join`, `group`, `sort`~~ ✅ COMPLETED
-3. **Design storage layer** - Plan how relations will be stored in memory (IN PROGRESS)
-4. **Implement parser** - Parse relation declarations and basic queries (NEXT)
-5. **Create evaluator** - Execute simple where/select queries
+### Next Steps
+1. **Create Relation value type** - Implement relations as first-class values
+2. **Design storage layer** - In-memory storage with immutable facts
+3. **Implement basic query functions** - `where`, `select`, `join`
+4. **Add temporal support** - Time-travel queries from the start
 
 ## Test Plan
 
 ### Unit Tests
-- Relation declaration parsing
-- Query operation parsing
-- Basic query execution
-- Type checking for relations
-- Join type safety
+- ✅ Relation declaration parsing
+- [ ] Relation value type construction
+- [ ] Query function implementations
+- [ ] Type checking for relations
+- [ ] Multiple dispatch on query operations
 
 ### Integration Tests
-- Relations with value types
-- Multiple dispatch on relations
-- Pipeline composition
-- Complex queries
-- Performance benchmarks
+- [ ] Relations with value types
+- [ ] Query composition with UFC
+- [ ] Pipeline operator with queries
+- [ ] Performance benchmarks
+- [ ] Temporal query tests
 
 ### Example Files
-- `relations.relic` - Basic relation examples
-- `queries.relic` - Query operation examples
-- `joins.relic` - Join and aggregation examples
-- `temporal.relic` - Time-based query examples
+- ✅ `relations.relic` - Shows functional approach to queries
+- [ ] `query_functions.relic` - Query function implementations
+- [ ] `temporal_queries.relic` - Time-based query examples
+- [ ] `custom_queries.relic` - User-defined query operations
 
 ## Success Criteria
 

@@ -649,11 +649,6 @@ impl TypeChecker {
                     message: "Match expression has no arms".to_string(),
                 }))
             }
-            
-            Expression::Query(_query) => {
-                // TODO: Implement query type checking in Phase 4
-                Ok(Type::Unknown)
-            }
         }
     }
 

@@ -24,17 +24,23 @@ Relic is an experimental programming language that demonstrates how **parse-don'
 - Pipeline operator (`|>`)
 - Interactive REPL with file support
 
-### Phase 3: Multiple Dispatch ~98% Complete
+### Phase 3: Multiple Dispatch ✅ Complete
 - ✅ Multiple dispatch with type-based precedence
 - ✅ Compile-time ambiguity detection
 - ✅ UFC integration with dispatch
 - ✅ Unified function syntax design (all functions can dispatch)
 - ✅ Parameter guards in dispatch with guard evaluation
 - ✅ Compile-time specialization for performance
-- 🚧 Runtime dispatch caching (optional optimization)
+- ✅ Runtime dispatch caching
 
-### Phase 4+: Future Work
-- Functional-relational core with query operations
+### Phase 4: Functional-Relational Core ~15% Complete
+- ✅ Relation schema declarations (parsed)
+- ✅ Pure functional approach (no special query syntax)
+- 🚧 Relations as value types
+- 🚧 Query operations as regular functions
+- 🚧 Temporal support built-in
+
+### Phase 5+: Future Work
 - Advanced type system features (row types, refinement types)
 - Sea of nodes compiler architecture
 - Effect system integration
@@ -211,7 +217,7 @@ Key examples to understand the language:
 2. **No string concatenation** - String operations limited
 3. **Basic pattern matching** - Only simple constructor patterns
 4. **Limited built-in functions** - Minimal standard library
-5. **No runtime dispatch caching** - Each call recomputes dispatch (mitigated by compile-time specialization)
+5. **No list/array literals** - Collections not yet implemented
 
 ## Contributing Guidelines
 
@@ -233,10 +239,11 @@ When making changes:
 ## Future Directions
 
 The language is evolving toward:
-- Full functional-relational programming with built-in query operations
+- Full functional-relational programming where queries are regular functions
+- Relations as first-class values with temporal support
 - Advanced type system with refinement types and row polymorphism
 - Optimizing compiler using sea of nodes architecture
 - Effect system for controlled side effects
-- Rich standard library of value types
+- Rich standard library of value types and query operations
 
 Remember: Relic aims to make invalid states unrepresentable through its type system while maintaining elegance and performance.

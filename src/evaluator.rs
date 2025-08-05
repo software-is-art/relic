@@ -377,14 +377,6 @@ pub fn evaluate_expression(
                 }))
             }
         }
-        
-        Expression::Query(_query) => {
-            // TODO: Implement query evaluation in Phase 4
-            Err(Error::Validation(ValidationError {
-                message: "Query evaluation not yet implemented".to_string(),
-                value_type: "query".to_string(),
-            }))
-        }
     }
 }
 

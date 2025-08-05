@@ -208,14 +208,16 @@ Following "Out of the Tar Pit" architecture:
 - [ ] Enforce user-input data only in essential state
 
 ### 4.2 Pure Relational Algebra Implementation
-- [ ] Implement core relational operations as pure functions
-- [ ] UFC syntax for natural query composition:
+- [x] Design pure functional approach (no special query syntax)
+- [ ] Implement relations as value types
+- [ ] Create query operations as regular functions with multiple dispatch
+- [ ] UFC syntax works naturally with query functions:
   ```relic
   users
     .where(age > 21)
-    .join(orders, on: users.id == orders.userId)
-    .group(by: city)
-    .select(city, orderCount: count())
+    .join(orders, users.id == orders.userId)
+    .group([city])
+    .select([city, count()])
   ```
 - [ ] Multiple dispatch for operation optimization:
   ```relic
