@@ -154,6 +154,29 @@ impl TypeChecker {
                 ),
             }));
         }
+        
+        // Check for ambiguity with existing methods
+        if let Some(existing_methods) = self.env.get_methods(&decl.name) {
+            let new_param_types: Vec<_> = decl.parameters.iter().map(|p| &p.ty).collect();
+            
+            for existing in existing_methods {
+                // Check if parameter types match exactly (potential ambiguity)
+                if existing.parameter_types.len() == new_param_types.len() {
+                    let all_match = existing.parameter_types.iter()
+                        .zip(&new_param_types)
+                        .all(|(existing_ty, new_ty)| existing_ty == *new_ty);
+                        
+                    if all_match {
+                        return Err(Error::Type(TypeError {
+                            message: format!(
+                                "Ambiguous method definition: method '{}' with the same parameter types already exists",
+                                decl.name
+                            ),
+                        }));
+                    }
+                }
+            }
+        }
 
         // Register the method in the environment
         let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();

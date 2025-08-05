@@ -8,6 +8,10 @@ pub enum EvalValue {
     String(String),
     Integer(i64),
     Boolean(bool),
+    Value {
+        type_name: String,
+        fields: HashMap<String, EvalValue>,
+    },
 }
 
 // General expression evaluator that can handle all expression types including function calls
@@ -137,32 +141,40 @@ pub fn evaluate_expression(
                 evaluate_expression(&func_decl.body, &func_context, registry)
             } else if let Some(methods) = registry.get_methods(name) {
                 // Handle as a method call with multiple dispatch
-                // Find the best matching method based on argument types
-                let mut best_match = None;
+                // Find the best matching method based on argument types and specificity
+                let mut candidates = Vec::new();
                 
                 for method in methods {
                     if method.parameters.len() != arg_values.len() {
                         continue;
                     }
                     
-                    // For now, we do simple type matching based on runtime values
-                    // In the future, we could use more sophisticated type matching
+                    // Check if all parameters match
                     let matches = method.parameters.iter()
                         .zip(&arg_values)
                         .all(|(param, value)| {
-                            match (&param.ty, value) {
-                                (crate::types::Type::Int, EvalValue::Integer(_)) => true,
-                                (crate::types::Type::String, EvalValue::String(_)) => true,
-                                (crate::types::Type::Bool, EvalValue::Boolean(_)) => true,
-                                _ => false,
-                            }
+                            matches_type(&param.ty, value)
                         });
                         
                     if matches {
-                        best_match = Some(method);
-                        break; // Take first exact match for now
+                        // Calculate specificity score for this method
+                        let specificity = calculate_method_specificity(method, &arg_values);
+                        candidates.push((method, specificity));
                     }
                 }
+                
+                // Sort by specificity (higher is more specific)
+                candidates.sort_by(|a, b| b.1.cmp(&a.1));
+                
+                // Check for ambiguity - if top two have same specificity
+                if candidates.len() >= 2 && candidates[0].1 == candidates[1].1 {
+                    return Err(Error::Validation(ValidationError {
+                        message: format!("Ambiguous method call '{}' - multiple methods with same specificity", name),
+                        value_type: "method".to_string(),
+                    }));
+                }
+                
+                let best_match = candidates.first().map(|(method, _)| *method);
                 
                 if let Some(method) = best_match {
                     // Create new context with method parameters
@@ -224,10 +236,24 @@ pub fn evaluate_expression(
         
         Expression::MemberAccess(obj, member) => {
             let obj_val = evaluate_expression(obj, context, registry)?;
-            match (&obj_val, member.as_str()) {
-                (EvalValue::String(s), "length") => Ok(EvalValue::Integer(s.len() as i64)),
+            match &obj_val {
+                EvalValue::String(s) => match member.as_str() {
+                    "length" => Ok(EvalValue::Integer(s.len() as i64)),
+                    _ => Err(Error::Validation(ValidationError {
+                        message: format!("String has no member '{}'", member),
+                        value_type: "String".to_string(),
+                    })),
+                },
+                EvalValue::Value { type_name, fields } => {
+                    fields.get(member).cloned().ok_or_else(|| {
+                        Error::Validation(ValidationError {
+                            message: format!("Value type '{}' has no member '{}'", type_name, member),
+                            value_type: type_name.clone(),
+                        })
+                    })
+                },
                 _ => Err(Error::Validation(ValidationError {
-                    message: format!("Cannot access member {} on value", member),
+                    message: format!("Cannot access member {} on primitive value", member),
                     value_type: "".to_string(),
                 })),
             }
@@ -304,7 +330,47 @@ fn value_to_expression(val: EvalValue) -> Result<Expression> {
         EvalValue::String(s) => Ok(Expression::Literal(Literal::String(s))),
         EvalValue::Integer(n) => Ok(Expression::Literal(Literal::Integer(n))),
         EvalValue::Boolean(b) => Ok(Expression::Literal(Literal::Boolean(b))),
+        EvalValue::Value { type_name, .. } => {
+            // For now, we can't convert value objects back to expressions
+            Err(Error::Validation(ValidationError {
+                message: format!("Cannot convert value type '{}' to expression", type_name),
+                value_type: type_name,
+            }))
+        }
     }
+}
+
+// Check if a runtime value matches a type
+fn matches_type(ty: &crate::types::Type, value: &EvalValue) -> bool {
+    match (ty, value) {
+        (crate::types::Type::Int, EvalValue::Integer(_)) => true,
+        (crate::types::Type::String, EvalValue::String(_)) => true,
+        (crate::types::Type::Bool, EvalValue::Boolean(_)) => true,
+        (crate::types::Type::Value(type_name), EvalValue::Value { type_name: val_type, .. }) => {
+            type_name == val_type
+        },
+        (crate::types::Type::Any, _) => true, // Any matches everything
+        _ => false,
+    }
+}
+
+// Calculate specificity score for a method based on parameter types
+// Higher score means more specific
+fn calculate_method_specificity(method: &crate::ast::MethodDeclaration, arg_values: &[EvalValue]) -> u32 {
+    let mut score = 0;
+    
+    for (param, _value) in method.parameters.iter().zip(arg_values) {
+        score += match &param.ty {
+            crate::types::Type::Int => 3,     // Specific types get higher scores
+            crate::types::Type::String => 3,
+            crate::types::Type::Bool => 3,
+            crate::types::Type::Value(_) => 3,
+            crate::types::Type::Any => 1,     // Any is least specific
+            crate::types::Type::Unknown => 0,
+        };
+    }
+    
+    score
 }
 
 impl std::fmt::Display for EvalValue {
@@ -313,6 +379,9 @@ impl std::fmt::Display for EvalValue {
             EvalValue::String(s) => write!(f, "{}", s),
             EvalValue::Integer(n) => write!(f, "{}", n),
             EvalValue::Boolean(b) => write!(f, "{}", b),
+            EvalValue::Value { type_name, fields } => {
+                write!(f, "{}({:?})", type_name, fields)
+            },
         }
     }
 }

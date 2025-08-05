@@ -1,0 +1,24 @@
+// Test Any type as fallback in multiple dispatch
+
+// Most specific - exact type match
+method describe(x: Int) -> String {
+    "Integer"
+}
+
+method describe(x: String) -> String {
+    "String"
+}
+
+method describe(x: Bool) -> String {
+    "Boolean"
+}
+
+// Least specific - fallback for any type
+method describe(x: Any) -> String {
+    "Unknown type"
+}
+
+// We can test this in the REPL with:
+// describe(42)        // Should return "Integer"
+// describe("hello")   // Should return "String"
+// describe(true)      // Should return "Boolean"

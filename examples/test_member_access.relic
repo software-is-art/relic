@@ -1,0 +1,19 @@
+// Test member access for value types
+
+value EmailAddress(raw: String) {
+    validate: raw contains "@" && raw.length > 3
+    normalize: raw.toLowerCase()
+}
+
+// Method that accesses value type fields
+method getDomain(email: EmailAddress) -> String {
+    // This should work but currently doesn't
+    // We need to access the internal 'raw' field
+    "domain.com"  // Placeholder for now
+}
+
+// What we want to support:
+// method getDomain(email: EmailAddress) -> String {
+//     let parts = email.raw.split("@")
+//     parts[1]  // Get domain part
+// }

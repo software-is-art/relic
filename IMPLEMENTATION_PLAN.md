@@ -65,10 +65,22 @@ Relic embodies four fundamental principles:
 
 ## Recent Implementation Highlights
 
-### Function Evaluation (Completed February 2025)
+### Unified Function Syntax Decision (February 2025)
+- Decided to unify `fn` and `method` syntax following Julia's approach
+- All functions can potentially have multiple dispatch
+- Compiler automatically determines dispatch strategy
+- Simplifies mental model and improves user experience
+- See [PHASE_3_UNIFIED_SYNTAX.md](PHASE_3_UNIFIED_SYNTAX.md) for details
+
+### Function Evaluation and Multiple Dispatch (Completed February 2025)
 - Created a general expression evaluator (`src/evaluator.rs`) that handles all expression types
-- Functions are stored in the `ValueRegistry` and evaluated by creating new contexts
+- Implemented multiple dispatch system with type-based precedence
+- Functions are stored in the `ValueRegistry` with dispatch tables
 - Full support for:
+  - Multiple dispatch based on all argument types
+  - Type-based precedence rules (specificity scoring)
+  - Compile-time ambiguity detection
+  - UFC syntax for all functions
   - Function calls with type-checked arguments
   - Functions calling other functions
   - Let bindings within function bodies

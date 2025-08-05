@@ -123,6 +123,7 @@ impl Compiler {
 
 // Evaluation context for let-bindings
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 enum EvalValue {
     String(String),
     Integer(i64),

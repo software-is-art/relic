@@ -1,21 +1,21 @@
-# Phase 3: Multiple Dispatch Design
+# Phase 3: Multiple Dispatch Design (Revised with Unified Syntax)
 
-## Method Declaration Syntax
+## Unified Function Declaration Syntax
 
-After analyzing various multiple dispatch systems (Julia, CLOS, Dylan), here's the proposed syntax for Relic:
+After analyzing various multiple dispatch systems (Julia, CLOS, Dylan) and considering user experience, we've decided to follow Julia's approach of unified function syntax. All functions in Relic can potentially have multiple dispatch:
 
-### Basic Method Declaration
+### Basic Function Declaration with Multiple Dispatch
 
 ```relic
-method area(shape: Circle) -> Float {
+fn area(shape: Circle) -> Float {
     3.14159 * shape.radius * shape.radius
 }
 
-method area(shape: Rectangle) -> Float {
+fn area(shape: Rectangle) -> Float {
     shape.width * shape.height
 }
 
-method area(shape: Triangle) -> Float {
+fn area(shape: Triangle) -> Float {
     0.5 * shape.base * shape.height
 }
 ```
@@ -23,15 +23,15 @@ method area(shape: Triangle) -> Float {
 ### Multiple Parameter Dispatch
 
 ```relic
-method combine(a: String, b: String) -> String {
+fn combine(a: String, b: String) -> String {
     a + b
 }
 
-method combine(a: Int, b: Int) -> Int {
+fn combine(a: Int, b: Int) -> Int {
     a + b
 }
 
-method combine(a: List, b: List) -> List {
+fn combine(a: List, b: List) -> List {
     a.concat(b)
 }
 ```
@@ -39,42 +39,43 @@ method combine(a: List, b: List) -> List {
 ### Type Constraints and Guards
 
 ```relic
-method process(x: Int where x > 0, y: Int where y > 0) -> Int {
+fn process(x: Int where x > 0, y: Int where y > 0) -> Int {
     x * y
 }
 
-method format(n: Float where n >= 0) -> String {
+fn format(n: Float where n >= 0) -> String {
     "+" + n.toString()
 }
 
-method format(n: Float where n < 0) -> String {
+fn format(n: Float where n < 0) -> String {
     n.toString()
 }
 ```
 
-### Default/Fallback Methods
+### Default/Fallback Functions
 
 ```relic
-method display(x: Any) -> String {
+fn display(x: Any) -> String {
     x.toString()
 }
 
-method display(x: String) -> String {
+fn display(x: String) -> String {
     "\"" + x + "\""
 }
 
-method display(x: Int) -> String {
+fn display(x: Int) -> String {
     "Int(" + x.toString() + ")"
 }
 ```
 
 ## Key Design Decisions
 
-1. **`method` keyword**: Distinguishes multi-dispatch methods from regular functions
+1. **Unified `fn` syntax**: All functions can have multiple dispatch (no separate `method` keyword)
 2. **Type annotations required**: All parameters must have type annotations for dispatch
 3. **Guards with `where`**: Optional guards for runtime constraints
 4. **Return type annotations**: Required for clarity and type checking
 5. **`Any` type**: Acts as a fallback for generic dispatch
+6. **Compiler optimization**: Single-implementation functions are optimized to direct calls
 
 ## Dispatch Resolution Rules
 
@@ -90,7 +91,7 @@ method display(x: Int) -> String {
 
 ## Integration with UFC
 
-The existing UFC syntax seamlessly works with methods:
+The UFC syntax seamlessly works with all functions:
 
 ```relic
 let c = Circle(radius: 5)
@@ -98,18 +99,23 @@ let a1 = area(c)        // Direct call
 let a2 = c.area()       // UFC style - desugars to area(c)
 
 let result = 42.format()  // Calls format(42)
+
+// UFC makes no distinction between single or multi-dispatch functions
 ```
 
 ## Implementation Strategy
 
-1. **AST Extension**: Add `MethodDecl` node similar to `FunctionDecl`
-2. **Method Table**: Global table mapping (method_name, type_signature) -> implementation
+1. **Unified AST**: All functions use `FunctionDecl` node (method becomes optional alias)
+2. **Function Registry**: Global table mapping function_name -> list of implementations
 3. **Dispatch Algorithm**: 
-   - Collect all methods with matching name
-   - Filter by type compatibility
-   - Sort by specificity
-   - Apply guards
-   - Select most specific match
+   - Collect all functions with matching name
+   - If single implementation: direct call (optimized path)
+   - If multiple implementations:
+     - Filter by type compatibility
+     - Sort by specificity
+     - Apply guards
+     - Select most specific match
+4. **Backward Compatibility**: `method` keyword accepted as alias for `fn`
 
 ## Examples for Phase 3 Implementation
 
@@ -124,11 +130,11 @@ value Rectangle(width: Float, height: Float) {
 }
 
 // Area calculation with multiple dispatch
-method area(c: Circle) -> Float {
+fn area(c: Circle) -> Float {
     3.14159 * c.radius * c.radius
 }
 
-method area(r: Rectangle) -> Float {
+fn area(r: Rectangle) -> Float {
     r.width * r.height
 }
 
@@ -139,16 +145,16 @@ let r = Rectangle(width: 10, height: 20)
 println(c.area())  // 78.53975
 println(r.area())  // 200
 
-// Generic display
-method display(x: Any) -> String {
+// Generic display with fallback
+fn display(x: Any) -> String {
     "<" + x.typeName() + ">"
 }
 
-method display(n: Int) -> String {
+fn display(n: Int) -> String {
     "Integer: " + n.toString()
 }
 
-method display(s: String) -> String {
+fn display(s: String) -> String {
     "String: \"" + s + "\""
 }
 ```

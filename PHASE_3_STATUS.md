@@ -1,10 +1,13 @@
 # Phase 3: Multiple Dispatch Status
 
 ## Overview
-Phase 3 focuses on implementing a multiple dispatch system for Relic, allowing methods to be dispatched based on the runtime types of all arguments, not just the first one.
+Phase 3 focuses on implementing a multiple dispatch system for Relic, allowing functions to be dispatched based on the runtime types of all arguments, not just the first one.
+
+## Major Design Change: Unified Function Syntax
+Based on user experience analysis and inspiration from Julia, we've decided to **unify function syntax** - eliminating the distinction between `fn` and `method`. All functions will use `fn` syntax and can potentially have multiple dispatch. See [PHASE_3_UNIFIED_SYNTAX.md](PHASE_3_UNIFIED_SYNTAX.md) for details.
 
 ## Summary
-Phase 3 is now **~70% complete** with basic multiple dispatch functionality fully working! Methods can be called with both traditional and UFC syntax, and the runtime correctly dispatches to the appropriate method based on all argument types.
+Phase 3 is now **~80% complete** with basic multiple dispatch functionality fully working! Functions can be called with both traditional and UFC syntax, and the runtime correctly dispatches to the appropriate implementation based on all argument types. Type-based precedence and compile-time ambiguity detection are now implemented.
 
 ## Completed Tasks ✅
 
@@ -69,17 +72,13 @@ Phase 3 is now **~70% complete** with basic multiple dispatch functionality full
 
 ## In Progress Tasks 🚧
 
-### Type-Based Precedence Rules
-- Need to implement specificity ordering
-- Most specific method should be selected (not just first match)
-- Consider parameter type hierarchies
+### Type-Based Precedence Rules ✅
+- Implemented specificity scoring for method selection
+- Most specific method is now selected based on type scores
+- Any type has lowest specificity (score 1) vs concrete types (score 3)
+- Ambiguity detection when multiple methods have same specificity
 
 ## Pending Tasks 📋
-
-### 1. Ambiguity Detection
-- Detect when multiple methods could match
-- Provide clear error messages for ambiguous calls
-- Implement precedence rules
 
 ### 4. Performance Optimizations
 - Add compile-time specialization
@@ -88,19 +87,18 @@ Phase 3 is now **~70% complete** with basic multiple dispatch functionality full
 
 ## Current Limitations
 
-1. **No Type Precedence**: Currently uses first-match rather than most-specific match
-2. **No Member Access**: Value type fields aren't accessible in method bodies (still an issue)
-3. **Single Parameter Values**: Value types still limited to single parameter
-4. **No String Concatenation**: String operations not yet implemented
-5. **No Subtype Dispatch**: Only exact type matches work
-6. **No Parameter Guards**: Guards are parsed but not used in dispatch
+1. **No Member Access**: Value type fields aren't accessible in method bodies (partial support added)
+2. **Single Parameter Values**: Value types still limited to single parameter
+3. **No String Concatenation**: String operations not yet implemented
+4. **No Subtype Dispatch**: Only exact type matches work
+5. **No Parameter Guards**: Guards are parsed but not used in dispatch
 
 ## Next Steps
 
-1. Implement type-based precedence rules for method selection
-2. Add ambiguity detection at compile time
-3. Add member access for value types
-4. Implement compile-time specialization for performance
+1. Complete member access implementation for value types
+2. Implement parameter guards in dispatch
+3. Add compile-time specialization for performance
+4. Support for multi-parameter value types
 
 ## Test Status
 
@@ -117,7 +115,7 @@ Phase 3 is now **~70% complete** with basic multiple dispatch functionality full
 ## Code Examples Working
 
 ```relic
-// Basic multiple dispatch
+// Basic multiple dispatch (current syntax - will migrate to 'fn')
 method add(x: Int, y: Int) -> Int {
     x + y
 }
@@ -136,7 +134,7 @@ method triple(x: Int) -> Int { x * 3 }
 
 7.double().triple()  // Returns 42
 
-// Different types, same method name
+// Different types, same function name
 method process(x: Int) -> Int { x * 2 }
 method process(x: Bool) -> Bool { !x }
 
@@ -144,6 +142,29 @@ process(21)    // Returns 42
 process(true)  // Returns false
 ```
 
-## Phase 3 Progress: ~70% Complete
+## Future Syntax (Unified Functions)
 
-The core multiple dispatch system is fully functional! Methods can be defined, called with traditional or UFC syntax, and the runtime correctly selects the appropriate method based on argument types. The main remaining work involves optimization, precedence rules, and edge case handling.
+```relic
+// All functions use 'fn' - compiler handles dispatch
+fn add(x: Int, y: Int) -> Int {
+    x + y
+}
+
+fn add(x: String, y: String) -> String {
+    x + x  // String concat when implemented
+}
+
+// Natural evolution - just add specializations
+fn process(x: Int) -> Int { x * 2 }
+fn process(x: Bool) -> Bool { !x }
+fn process(x: Any) -> String { x.toString() }  // Fallback
+```
+
+## Phase 3 Progress: ~80% Complete
+
+The core multiple dispatch system is fully functional! Functions with multiple implementations can be defined, called with traditional or UFC syntax, and the runtime correctly selects the appropriate implementation based on argument types. The main remaining work involves:
+
+1. Implementing the unified function syntax (making `method` optional)
+2. Performance optimizations and compile-time specialization
+3. Parameter guards in dispatch
+4. Documentation updates to reflect the new unified approach

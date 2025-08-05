@@ -1,0 +1,25 @@
+// Test type precedence in multiple dispatch
+// More specific types should be selected over less specific ones
+
+// Most specific - exact type match
+method describe(x: Int) -> String {
+    "Integer"
+}
+
+method describe(x: String) -> String {
+    "String"
+}
+
+method describe(x: Bool) -> String {
+    "Boolean"
+}
+
+// Test ambiguity detection - same parameter types
+method process(x: Int, y: Int) -> Int {
+    x + y
+}
+
+// This should cause ambiguity error at compile time
+method process(x: Int, y: Int) -> Int {
+    x * y
+}
