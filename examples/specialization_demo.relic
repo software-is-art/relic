@@ -1,0 +1,41 @@
+// Demonstration of compile-time specialization for multiple dispatch
+
+// Define some functions with multiple implementations
+fn process(x: Int) -> Int {
+    x * 2
+}
+
+fn process(x: Bool) -> Bool {
+    !x
+}
+
+fn process(x: Any) -> Int {
+    42  // Fallback for any type
+}
+
+// Functions with guards for specialization
+fn abs(n: Int where n >= 0) -> Int {
+    n
+}
+
+fn abs(n: Int where n < 0) -> Int {
+    0 - n
+}
+
+// Test the dispatch system
+let a = process(21) in      // Should specialize to Int version
+let b = process(true) in    // Should specialize to Bool version
+let c = abs(-5) in          // Should use runtime dispatch due to guards
+let d = abs(10) in          // Should use runtime dispatch due to guards
+a + c + d                   // Returns 42 + 5 + 10 = 57
+
+// Chained function calls with specialization
+fn double(x: Int) -> Int { x * 2 }
+fn triple(x: Int) -> Int { x * 3 }
+
+// This should be optimized with specialization
+7 |> double() |> triple()   // 7 * 2 * 3 = 42
+
+// Method calls that get specialized
+21.process()                // Should specialize to Int version
+true.process()              // Should specialize to Bool version

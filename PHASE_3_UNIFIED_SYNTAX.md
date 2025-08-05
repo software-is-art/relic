@@ -166,6 +166,22 @@ fn area(c: Circle) -> Float { ... }
 - Enables better metaprogramming (all functions are first-class)
 - Simplifies language specification
 
+## Implementation Status
+
+### Completed ✅
+- `method` keyword now treated as alias for `fn`
+- All functions stored in unified registry
+- Type checker supports multiple implementations per function name
+- Evaluator automatically dispatches based on number of implementations
+- Both `fn` and `method` produce identical behavior
+- Compile-time specialization optimizes single-implementation functions
+- UFC syntax works with unified function system
+
+### Future Work
+- Deprecation warnings for `method` keyword (Phase 4)
+- Remove `method` keyword entirely (Phase 5)
+- Further optimization of dispatch mechanisms
+
 ## Conclusion
 
 Unifying function syntax makes Relic more elegant, user-friendly, and powerful. By following Julia's lead and making every function potentially multi-dispatch, we remove unnecessary complexity while maintaining all the benefits of multiple dispatch. This change aligns with Relic's philosophy of simplicity and expressiveness.

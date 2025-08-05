@@ -1,17 +1,20 @@
 use crate::ast::*;
 use crate::error::{Error, Result, ValidationError};
+use crate::specialization::SpecializationCache;
 use crate::value::{ValueConstructor, ValueRegistry};
 use std::any::Any;
 use std::collections::HashMap;
 
 pub struct Compiler {
     registry: ValueRegistry,
+    specialization_cache: SpecializationCache,
 }
 
 impl Compiler {
     pub fn new() -> Self {
         Self {
             registry: ValueRegistry::new(),
+            specialization_cache: SpecializationCache::new(),
         }
     }
 
@@ -120,7 +123,29 @@ impl Compiler {
     }
 
     pub fn evaluate_expression(&self, expr: &Expression) -> Result<crate::evaluator::EvalValue> {
+        // Use optimized evaluator when we have type information available
+        // For now, fall back to regular evaluation
         crate::evaluator::evaluate_expression(expr, &HashMap::new(), &self.registry)
+    }
+    
+    pub fn evaluate_expression_with_optimization(&mut self, expr: &Expression) -> Result<crate::evaluator::EvalValue> {
+        // Pre-specialize function calls in the expression
+        let mut expr_copy = expr.clone();
+        crate::specialization::specialize_function_calls(
+            &mut expr_copy,
+            &HashMap::new(), // Type environment - would be populated from type checker
+            &mut self.specialization_cache,
+            &self.registry,
+        );
+        
+        // Use optimized evaluator with specialization cache
+        crate::optimized_evaluator::evaluate_expression_optimized(
+            &expr_copy,
+            &HashMap::new(),
+            &self.registry,
+            &self.specialization_cache,
+            &HashMap::new(), // Type environment
+        )
     }
 }
 

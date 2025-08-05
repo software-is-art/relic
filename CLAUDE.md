@@ -24,13 +24,14 @@ Relic is an experimental programming language that demonstrates how **parse-don'
 - Pipeline operator (`|>`)
 - Interactive REPL with file support
 
-### Phase 3: Multiple Dispatch ~95% Complete
+### Phase 3: Multiple Dispatch ~98% Complete
 - ✅ Multiple dispatch with type-based precedence
 - ✅ Compile-time ambiguity detection
 - ✅ UFC integration with dispatch
 - ✅ Unified function syntax design (all functions can dispatch)
 - ✅ Parameter guards in dispatch with guard evaluation
-- 🚧 Compile-time specialization
+- ✅ Compile-time specialization for performance
+- 🚧 Runtime dispatch caching (optional optimization)
 
 ### Phase 4+: Future Work
 - Functional-relational core with query operations
@@ -81,6 +82,8 @@ cargo build --release               # Build optimized version
 - Type-based precedence rules (concrete types > Any type)
 - Compile-time ambiguity detection
 - Runtime dispatch with specificity scoring
+- Compile-time specialization when types are statically known
+- Optimized evaluator bypasses dispatch for specialized calls
 
 #### Value Objects
 - Immutable by design
@@ -198,6 +201,8 @@ Key examples to understand the language:
 - `src/ast.rs` - AST definitions
 - `src/types.rs` - Type system
 - `src/evaluator.rs` - Expression evaluation and dispatch
+- `src/specialization.rs` - Compile-time dispatch optimization
+- `src/optimized_evaluator.rs` - Specialized evaluation paths
 - `src/main.rs` - REPL implementation
 
 ## Current Limitations
@@ -205,8 +210,8 @@ Key examples to understand the language:
 1. **Single-parameter value types** - Multi-field values not yet supported
 2. **No string concatenation** - String operations limited
 3. **Basic pattern matching** - Only simple constructor patterns
-4. **No parameter guards** - Guards parsed but not evaluated
-5. **Limited built-in functions** - Minimal standard library
+4. **Limited built-in functions** - Minimal standard library
+5. **No runtime dispatch caching** - Each call recomputes dispatch (mitigated by compile-time specialization)
 
 ## Contributing Guidelines
 

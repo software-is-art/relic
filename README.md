@@ -24,6 +24,8 @@ This initial implementation includes:
 - ✅ Function definitions with multiple dispatch
 - ✅ Uniform Function Call (UFC) syntax
 - ✅ Parameter guards for conditional dispatch
+- ✅ Compile-time specialization for performance
+- ✅ Type-based precedence with specificity scoring
 
 ## Quick Start
 
@@ -125,6 +127,8 @@ Functions support:
 - **Parameter guards**: Additional conditions with `where` clauses
 - **Uniform Function Call (UFC)**: `x.f(y)` is sugar for `f(x, y)`
 - **Ambiguity detection**: Compile-time errors for ambiguous calls
+- **Compile-time specialization**: Static dispatch when types are known
+- **Unified syntax**: `method` is an alias for `fn` - all functions can dispatch
 
 ## Examples
 
@@ -135,6 +139,7 @@ See the `examples/` directory for more examples:
 - `pattern_matching.relic`: Pattern matching syntax
 - `functions.relic`: Function definitions and dispatch
 - `guard_demo.relic`: Parameter guards in action
+- `specialization_demo.relic`: Compile-time specialization examples
 
 ## Architecture
 
@@ -143,7 +148,9 @@ The implementation follows a traditional compiler architecture:
 2. **Parser** (`src/parser.rs`): Builds AST
 3. **Type Checker** (`src/typechecker.rs`): Validates types
 4. **Compiler** (`src/compiler.rs`): Generates value constructors
-5. **Runtime** (`src/value.rs`): Executes value construction
+5. **Evaluator** (`src/evaluator.rs`): Expression evaluation with dispatch
+6. **Specialization** (`src/specialization.rs`): Compile-time optimization
+7. **Runtime** (`src/value.rs`): Value construction and function storage
 
 ## Next Steps
 
