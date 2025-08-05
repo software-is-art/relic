@@ -19,25 +19,31 @@ Phase 4 is **~15% complete** - Relation schema declarations are parsed, and we'v
 
 ## Planned Tasks 📋
 
-### 1. Relation Values and Storage
+### 1. Value Generation from Relations
 - [x] Design relation schema syntax
-- [ ] Implement Relation as a value type
-- [ ] Create in-memory storage backend for relations
-- [ ] Build immutable fact storage (inspired by Datomic)
-- [ ] Add temporal tracking to all facts
-- [ ] Create relation constructor functions
+- [ ] Generate row value types from relation schemas
+- [ ] Generate relation value types (collections)
+- [ ] Generate field constants with type information
+- [ ] Create constructor functions for relations
+- [ ] Build validation for row value construction
 
-### 2. Query Operations as Functions
-- [ ] Implement core query functions using multiple dispatch:
+### 2. Storage and Implementation
+- [ ] Create in-memory storage backend for relation values
+- [ ] Implement copy-on-write for efficient immutability
+- [ ] Build indexes as part of relation values
+- [ ] Add temporal tracking (valid time & transaction time)
+- [ ] Support different storage strategies via multiple dispatch
+
+### 3. Query Operations as Typed Functions
+- [ ] Implement core query functions with proper types:
   ```relic
-  fn where(rel: Relation, predicate: Expression) -> Relation { ... }
-  fn select(rel: Relation, fields: List) -> Relation { ... }
-  fn join(left: Relation, right: Relation, on: Expression) -> Relation { ... }
+  fn where<T>(rel: Relation<T>, pred: Predicate<T>) -> Relation<T>
+  fn select<T, U>(rel: Relation<T>, fields: Fields<T, U>) -> Relation<U>
+  fn join<T, U>(left: Relation<T>, right: Relation<U>, on: JoinPred<T, U>) -> Relation<T, U>
   ```
-- [ ] Leverage UFC for natural query syntax
-- [ ] Use multiple dispatch for optimization based on relation types
-- [ ] Create composable query operations
-- [ ] Build standard library of query functions
+- [ ] Type-safe field references instead of strings
+- [ ] Predicate functions that work with row types
+- [ ] Query optimization through multiple dispatch
 
 ### 3. Type-Level Relationships
 - [ ] Encode relationships through type dependencies:
@@ -53,27 +59,32 @@ Phase 4 is **~15% complete** - Relation schema declarations are parsed, and we'v
 - [ ] Create inference for transitive relationships
 
 ### 4. Complete Relational Operations
-All operations will be implemented as regular functions, not special syntax:
+All operations work with typed relations and row values:
 
 #### MVP Operations (implement first)
-- [ ] `fn where(rel: Relation, pred: Expression) -> Relation`
-- [ ] `fn select(rel: Relation, fields: List) -> Relation`
-- [ ] `fn join(left: Relation, right: Relation, on: Expression) -> Relation`
-- [ ] `fn limit(rel: Relation, n: Int) -> Relation`
+- [ ] `fn where<T>(rel: Relation<T>, pred: T -> Bool) -> Relation<T>`
+- [ ] `fn select<T, U>(rel: Relation<T>, ...fields: Field<?, T>) -> Relation<U>`
+- [ ] `fn join<T, U, V>(left: Relation<T>, right: Relation<U>, on: (T, U) -> Bool) -> Relation<V>`
+- [ ] `fn limit<T>(rel: Relation<T>, n: Int) -> Relation<T>`
 
-#### Essential Operations (implement second)
-- [ ] `fn distinct(rel: Relation) -> Relation`
-- [ ] `fn union(rel1: Relation, rel2: Relation) -> Relation`
-- [ ] `fn group(rel: Relation, by: List) -> GroupedRelation`
-- [ ] `fn sort(rel: Relation, by: List) -> Relation`
-- [ ] `fn offset(rel: Relation, n: Int) -> Relation`
+#### Row Access Operations
+- [ ] `fn find<T>(rel: Relation<T>, pred: T -> Bool) -> Option<T>`
+- [ ] `fn first<T>(rel: Relation<T>) -> Option<T>`
+- [ ] `fn forEach<T>(rel: Relation<T>, f: T -> Unit) -> Unit`
+- [ ] `fn map<T, U>(rel: Relation<T>, f: T -> U) -> Relation<U>`
 
-#### Aggregation Functions
-- [ ] `fn count(grouped: GroupedRelation) -> Relation`
-- [ ] `fn sum(grouped: GroupedRelation, field: String) -> Relation`
-- [ ] `fn avg(grouped: GroupedRelation, field: String) -> Relation`
-- [ ] `fn min(grouped: GroupedRelation, field: String) -> Relation`
-- [ ] `fn max(grouped: GroupedRelation, field: String) -> Relation`
+#### Set Operations (type-safe)
+- [ ] `fn union<T>(r1: Relation<T>, r2: Relation<T>) -> Relation<T>`
+- [ ] `fn intersect<T>(r1: Relation<T>, r2: Relation<T>) -> Relation<T>`
+- [ ] `fn difference<T>(r1: Relation<T>, r2: Relation<T>) -> Relation<T>`
+- [ ] `fn distinct<T>(rel: Relation<T>) -> Relation<T>`
+
+#### Aggregation (returns values, not relations)
+- [ ] `fn count<T>(rel: Relation<T>) -> Int`
+- [ ] `fn sum<T>(rel: Relation<T>, field: Field<Number, T>) -> Number`
+- [ ] `fn avg<T>(rel: Relation<T>, field: Field<Number, T>) -> Float`
+- [ ] `fn min<T, U>(rel: Relation<T>, field: Field<U, T>) -> Option<U>`
+- [ ] `fn max<T, U>(rel: Relation<T>, field: Field<U, T>) -> Option<U>`
 
 ### 5. Integration with Existing Features
 - [ ] Ensure relations work with value types
@@ -82,32 +93,59 @@ All operations will be implemented as regular functions, not special syntax:
 - [ ] Integrate with pattern matching
 - [ ] Support pipeline operator for query composition
 
-## Design Philosophy: Relations as Values
+## Design Philosophy: Relations as Value-Generating Constructs
 
-The key insight is that relations should be implemented as regular Relic values, with query operations as normal functions. This approach:
+The key insight is that relation declarations should generate multiple interconnected value types, maintaining Relic's "everything is a value" philosophy while providing type safety and relational semantics.
 
-1. **Maintains Language Consistency** - Everything uses the same mechanisms (values, functions, UFC)
-2. **Enables User Extensions** - Users can define custom query operations
-3. **Leverages Multiple Dispatch** - Different relation types can have optimized implementations
-4. **Simplifies the Parser** - No special syntax rules needed
-5. **Promotes Composability** - Queries are just function compositions
+### What a Relation Declaration Generates
 
-Example of how it works:
+When you declare a relation, it creates:
+
+1. **A Row Value Type** - Each record is an immutable value object
+2. **A Relation Value Type** - The collection itself is an immutable value
+3. **Field Constants** - Type-safe references to fields
+4. **Constructor Functions** - For creating relation instances
+
 ```relic
-// Relations are values
-value Relation(data: InternalRelationData) {
-    // Internal storage implementation
+// This declaration:
+relation Users {
+    id: UserId,
+    name: String,
+    age: Int
+    
+    key: id
 }
 
-// Query operations are functions with multiple dispatch
-fn where(rel: Relation, predicate: Expression) -> Relation {
-    // Filter implementation
+// Automatically generates:
+
+// 1. Row value type
+value User(id: UserId, name: String, age: Int) {
+    // Each row is a validated value
 }
 
-// UFC makes it natural
-users.where(age > 21).select([name, email])
-// Desugars to: select(where(users, age > 21), [name, email])
+// 2. Relation value type  
+value UsersRelation(rows: InternalStorage<User>) {
+    // Immutable collection of User values
+}
+
+// 3. Field references
+const User.id: Field<UserId, User>
+const User.name: Field<String, User>
+const User.age: Field<Int, User>
+
+// 4. Constructor function
+fn Users(rows: List<User>) -> UsersRelation {
+    // Creates a new relation instance
+}
 ```
+
+### Why This Approach
+
+1. **Parse Don't Validate** - Each row is a validated value object
+2. **Immutability** - Both relations and rows are immutable values
+3. **Type Safety** - Strong types for relations, rows, and fields
+4. **Composability** - Relations transform functionally
+5. **Multiple Dispatch** - Different storage strategies possible
 
 ## Design Decisions
 
@@ -137,36 +175,41 @@ relation Orders {
 ```
 
 ### Query Syntax
-Queries are just function calls with UFC syntax:
+With the value-generating approach, queries become type-safe operations on relation values:
 
 ```relic
-// Simple query - just a function call
-users.where(age > 21)
+// Start with a relation value
+let users: UsersRelation = loadUsers()
 
-// Chaining - natural with UFC
+// Query operations transform relation values
+let adults: UsersRelation = users.where(User.age > 18)
+
+// Field references are type-safe
 users
-  .where(city == "New York")
-  .where(age >= 21)
-  .select([name, email])
+  .where(User.city == "New York")
+  .where(User.age >= 21)
+  .select(User.name, User.email)
 
-// Pipeline operator also works
-users |> where(age > 21) |> select([name])
+// Can extract individual row values
+match users.find(User.id == userId) {
+    Some(user: User) => user.name,  // user is a value object
+    None => "Unknown"
+}
 
-// Multiple dispatch optimizes based on types
-fn join(h: HashRelation, s: SortedRelation) -> Relation {
+// Multiple dispatch on relation types
+fn join(h: HashIndexed<User>, s: SortedRelation<Order>) -> JoinedRelation {
     // Use hash join algorithm
 }
 
-fn join(s1: SortedRelation, s2: SortedRelation) -> Relation {
-    // Use merge join algorithm
+// Query functions work with typed relations
+fn where(rel: UsersRelation, pred: Predicate<User>) -> UsersRelation {
+    UsersRelation(rel.rows.filter(pred))
 }
 
-// Users can define custom operations
-fn topN(rel: Relation, n: Int, by: String) -> Relation {
-    rel.sort([by]).limit(n)
+// Users can define type-safe custom operations
+fn topUsers(users: UsersRelation, n: Int) -> UsersRelation {
+    users.sort(User.score.desc()).limit(n)
 }
-
-users.topN(10, "score")
 ```
 
 ### Immutability and Time

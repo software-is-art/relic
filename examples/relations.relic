@@ -1,8 +1,7 @@
 // Relic Phase 4: Functional-Relational Programming Examples
-// This file demonstrates the new approach where relations are values
-// and query operations are regular functions using multiple dispatch
+// This file demonstrates how relation declarations generate value types
 
-// Define relation schemas (these declare the structure)
+// Define relation schemas - these generate multiple value types
 relation Users {
     id: Int,
     name: String,
@@ -14,6 +13,12 @@ relation Users {
     unique: email
 }
 
+// This declaration automatically generates:
+// 1. value User(id: Int, name: String, email: String, age: Int, city: String)
+// 2. value UsersRelation(rows: InternalStorage<User>)
+// 3. Field constants: User.id, User.name, User.email, User.age, User.city
+// 4. Constructor: fn Users(rows: List<User>) -> UsersRelation
+
 relation Orders {
     id: Int,
     userId: Int,
@@ -24,6 +29,8 @@ relation Orders {
     key: id
     foreign: userId references Users.id
 }
+
+// Generates: Order value type, OrdersRelation type, Order.* fields
 
 // In the new approach, query operations would be implemented as regular functions
 // that operate on relation values. Here's how it would look:
