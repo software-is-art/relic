@@ -3,6 +3,7 @@ pub mod compiler;
 pub mod error;
 pub mod evaluator;
 pub mod lexer;
+pub mod list;
 pub mod optimized_evaluator;
 pub mod parser;
 pub mod query;

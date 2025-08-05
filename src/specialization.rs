@@ -141,7 +141,7 @@ fn types_compatible(param_type: &Type, arg_type: &Type) -> bool {
 /// Calculate type specificity score (higher is more specific)
 fn type_specificity(ty: &Type) -> u32 {
     match ty {
-        Type::Int | Type::String | Type::Bool | Type::Value(_) => 3,
+        Type::Int | Type::String | Type::Bool | Type::Value(_) | Type::Type | Type::List(_) => 3,
         Type::Any => 1,
         Type::Unknown => 0,
     }
@@ -221,7 +221,7 @@ pub fn specialize_function_calls(
         Expression::MemberAccess(expr, _) => {
             specialize_function_calls(expr, type_env, specialization_cache, registry);
         }
-        Expression::Literal(_) | Expression::Identifier(_) => {
+        Expression::Literal(_) | Expression::Identifier(_) | Expression::TypeLiteral(_) => {
             // No function calls to specialize
         }
     }
@@ -250,6 +250,7 @@ fn infer_expression_type(expr: &Expression, type_env: &HashMap<String, Type>) ->
             }
         }
         Expression::Comparison(_, _, _) => Type::Bool,
+        Expression::TypeLiteral(_) => Type::Type,
         // Value construction is through function calls
         // For complex expressions, we can't determine the type statically
         _ => Type::Unknown,

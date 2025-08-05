@@ -50,7 +50,7 @@ value Users = relationOf({
 - Artificial distinction between values and relations
 - Complex implementation for what should be simple
 
-### 3. Current Approach: Type-as-Relation
+### 3. Current Approach: Type-as-Relation ✅ IMPLEMENTED
 
 The breakthrough insight: **relations are just the set of all values of a given type**.
 
@@ -139,19 +139,21 @@ The type system guarantees schema consistency. Impossible to have schema mismatc
 ### 5. Natural Constraints
 Key and unique constraints are natural properties of the value type.
 
-## Implementation Strategy
+## Implementation Status ✅
 
-### Phase 1: Instance Tracking
-- ValueRegistry tracks all instances by type
-- Efficient indexing for queries
-- Memory management options
+### Phase 1: Instance Tracking ✅ COMPLETE
+- ValueRegistry tracks all instances by type using strong references
+- Persistent storage for REPL experimentation
+- Automatic registration on value construction
 
-### Phase 2: Type Methods
-- Add query methods to types
-- Integrate with evaluator
-- Support UFC syntax
+### Phase 2: Minimal Built-in Approach ✅ COMPLETE
+- Type as first-class values (e.g., `Person` → `Type(Person)`)
+- Single built-in: `all(t: Type) -> List[t]`
+- Type methods delegate to built-in for better UX
+- List type with essential functional methods
 
-### Phase 3: Advanced Features
+### Phase 3: Advanced Features 🚧 IN PROGRESS
+- Pure Relic standard library functions (count, where, find)
 - Cross-type joins
 - Aggregations
 - Temporal queries

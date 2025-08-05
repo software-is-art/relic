@@ -4,12 +4,25 @@ use crate::value::ValueRegistry;
 
 /// Register all standard library functions
 pub fn register_stdlib(registry: &mut ValueRegistry) {
-    // For now, we'll need to handle relationOf specially in the evaluator
-    // since it needs to create new value constructors dynamically.
-    // In the future, we could implement this more elegantly with:
-    // - First-class functions that can create value types
-    // - Macros or compile-time function evaluation
+    // Register the single built-in function: all(t: Type) -> List[t]
+    // This is the ONLY built-in needed for the Type-as-Relation model
+    register_all_function(registry);
+}
+
+/// Register the all(t: Type) -> List[t] built-in function
+/// This is the foundational function for the Type-as-Relation model
+fn register_all_function(registry: &mut ValueRegistry) {
+    let all_function = FunctionDeclaration {
+        name: "all".to_string(),
+        parameters: vec![ParameterWithGuard {
+            name: "t".to_string(),
+            ty: Type::Type,
+            guard: None,
+        }],
+        return_type: Type::List(Box::new(Type::Any)), // List of elements of the type
+        // The body is not used for built-ins - they are handled specially in the evaluator
+        body: Expression::Literal(Literal::String("built-in".to_string())),
+    };
     
-    // For now, let's not register it here and handle it as a special case
-    // in the evaluator when we don't find a regular function with that name.
+    registry.register_function(all_function);
 }

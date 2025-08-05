@@ -180,6 +180,8 @@ fn type_from_value(value: &EvalValue) -> Type {
         EvalValue::String(_) => Type::String,
         EvalValue::Boolean(_) => Type::Bool,
         EvalValue::Value { type_name, .. } => Type::Value(type_name.clone()),
+        EvalValue::Type(_) => Type::Type,
+        EvalValue::List(_) => Type::List(Box::new(Type::Any)), // TODO: Infer element type
     }
 }
 

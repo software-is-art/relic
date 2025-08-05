@@ -69,6 +69,7 @@ pub enum Expression {
     Pipeline(Box<Expression>, Box<Expression>),
     Let(String, Box<Expression>, Box<Expression>), // let name = value in body
     Match(Box<Expression>, Vec<MatchArm>),
+    TypeLiteral(String), // Type literals for Type-as-Relation (e.g., User as a Type value)
 }
 
 #[derive(Debug, Clone, PartialEq)]

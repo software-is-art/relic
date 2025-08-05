@@ -279,9 +279,8 @@ impl TypeChecker {
                 if let Some(ty) = self.locals.get(name) {
                     Ok(ty.clone())
                 } else if self.env.is_type_name(name) {
-                    // If it's a type name, return a special Type for it
-                    // For now, we'll treat it as a string type
-                    Ok(Type::String)
+                    // If it's a type name, return Type for Type-as-Relation
+                    Ok(Type::Type)
                 } else {
                     Err(Error::Type(TypeError {
                         message: format!("Undefined identifier: {}", name),
@@ -290,6 +289,20 @@ impl TypeChecker {
             },
 
             Expression::FunctionCall(name, args) => {
+                // Handle built-in functions first
+                if name == "all" && args.len() == 1 {
+                    let arg_type = self.check_expression(&args[0])?;
+                    if arg_type == Type::Type {
+                        // all(t: Type) -> List[t], but we don't know the exact element type yet
+                        // For now, return List[Any]
+                        return Ok(Type::List(Box::new(Type::Any)));
+                    } else {
+                        return Err(Error::Type(TypeError {
+                            message: format!("all() expects a Type argument, found {:?}", arg_type),
+                        }));
+                    }
+                }
+                
                 // With unified syntax, all functions can have multiple implementations
                 if let Some(functions) = self.env.get_functions(name) {
                     // Collect argument types
@@ -407,9 +420,9 @@ impl TypeChecker {
                     if self.env.is_type_name(type_name) {
                         // Handle Type-as-Relation methods
                         match method.as_str() {
-                            "all" if args.is_empty() => return Ok(Type::String), // TODO: Return list type
+                            "all" if args.is_empty() => return Ok(Type::List(Box::new(Type::Any))),
                             "count" if args.is_empty() => return Ok(Type::Int),
-                            "where" if args.len() == 1 => return Ok(Type::String), // TODO: Return list type
+                            "where" if args.len() == 1 => return Ok(Type::List(Box::new(Type::Any))), // TODO: Return list of specific type
                             "find" if args.len() == 1 => return Ok(Type::Value(type_name.clone())),
                             _ => return Err(Error::Type(TypeError {
                                 message: format!("Unknown type method {} or wrong arguments", method),
@@ -669,6 +682,17 @@ impl TypeChecker {
                 result_type.ok_or_else(|| Error::Type(TypeError {
                     message: "Match expression has no arms".to_string(),
                 }))
+            }
+
+            Expression::TypeLiteral(type_name) => {
+                // Type literals evaluate to Type values for Type-as-Relation
+                if self.env.is_type_name(type_name) {
+                    Ok(Type::Type)
+                } else {
+                    Err(Error::Type(TypeError {
+                        message: format!("Unknown type: {}", type_name),
+                    }))
+                }
             }
         }
     }

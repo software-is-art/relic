@@ -8,6 +8,10 @@ pub enum Type {
     Value(String),
     Any,
     Unknown,
+    // First-class type for the Type-as-Relation model
+    Type,
+    // Minimal List type for relational operations
+    List(Box<Type>),
 }
 
 #[derive(Debug, Clone)]

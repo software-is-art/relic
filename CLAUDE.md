@@ -33,13 +33,15 @@ Relic is an experimental programming language that demonstrates how **parse-don'
 - ✅ Compile-time specialization for performance
 - ✅ Runtime dispatch caching
 
-### Phase 4: Functional-Relational Core ~25% Complete
-- ✅ **Relations as Value Constructors** (major design evolution)
-- ✅ Relation value type with schema and constraints
-- ✅ Removed all relation-specific syntax (cleaner architecture)
-- ✅ Basic query operations framework
-- 🚧 Built-in `relationOf` function
-- 🚧 Value cloning for queries
+### Phase 4: Functional-Relational Core ~75% Complete
+- ✅ **Type-as-Relation Model** (revolutionary design evolution)
+- ✅ Type as first-class values (`Person` → `Type(Person)`)
+- ✅ Minimal built-in approach: only `all(t: Type)` is built-in
+- ✅ List type with essential functional methods
+- ✅ Persistent instance storage using strong references
+- ✅ Both `all(Person)` and `Person.all()` syntax supported
+- 🚧 Pure Relic standard library functions (count, where, find)
+- 🚧 Field value extraction for better display
 - 🚧 Join and aggregation operations
 
 ### Phase 5+: Future Work
@@ -99,11 +101,12 @@ cargo build --release               # Build optimized version
 - Carry type-level proof of validity
 - Support for normalization during construction
 
-#### Relations as Value Constructors (New!)
-- Relations are not special syntax but value constructors
-- No code generation or hidden magic
-- Query operations are regular functions
-- Aligns with "everything is a value" philosophy
+#### Type-as-Relation Model (Revolutionary!)
+- Every value type implicitly forms a relation of its instances
+- No special relation syntax - types ARE relations
+- Type names evaluate to first-class Type values
+- Query with `all(Person)` or `Person.all()`
+- Perfect alignment with sea of nodes architecture
 
 ## Language Features
 
@@ -231,9 +234,9 @@ Key examples to understand the language:
 2. **No string concatenation** - String operations limited
 3. **Basic pattern matching** - Only simple constructor patterns
 4. **Limited built-in functions** - Minimal standard library
-5. **No list/array literals** - Collections not yet implemented
-6. **Relations need value cloning** - Query operations incomplete
-7. **No `relationOf` built-in yet** - Relations can't be created in REPL
+5. **No list/array literals** - Collections not yet implemented (but List type exists)
+6. **Field extraction incomplete** - List display shows empty `{}` for values
+7. **Pure Relic stdlib pending** - count/where/find not yet implemented in Relic
 
 ## Contributing Guidelines
 

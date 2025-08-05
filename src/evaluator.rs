@@ -1,6 +1,6 @@
 use crate::ast::*;
 use crate::error::{Error, Result, ValidationError};
-use crate::relation::{Relation, Schema};
+// use crate::relation::{Relation, Schema}; // Unused for now
 use crate::value::ValueRegistry;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -30,6 +30,10 @@ pub enum EvalValue {
         type_name: String,
         fields: HashMap<String, EvalValue>,
     },
+    // First-class Type value for Type-as-Relation
+    Type(String), // Type name
+    // List value for relational operations
+    List(Vec<EvalValue>),
 }
 
 // General expression evaluator that can handle all expression types including function calls
@@ -48,8 +52,8 @@ pub fn evaluate_expression(
             if let Some(value) = context.get(name) {
                 Ok(value.clone())
             } else if registry.constructors.contains_key(name) {
-                // If it's a type name, return a special value representing the type
-                Ok(EvalValue::String(format!("<type {}>", name)))
+                // If it's a type name, return a Type value for Type-as-Relation
+                Ok(EvalValue::Type(name.clone()))
             } else {
                 Err(Error::Validation(ValidationError {
                     message: format!("Unknown identifier: {}", name),
@@ -147,6 +151,27 @@ pub fn evaluate_expression(
             let mut arg_values = Vec::new();
             for arg in args {
                 arg_values.push(evaluate_expression(arg, context, registry)?);
+            }
+            
+            // Handle built-in functions first
+            if name == "all" && arg_values.len() == 1 {
+                if let EvalValue::Type(type_name) = &arg_values[0] {
+                    // Get all instances of the type and return as List
+                    let instances = registry.get_all_instances(type_name);
+                    let eval_instances: Vec<EvalValue> = instances
+                        .into_iter()
+                        .map(|instance| EvalValue::Value {
+                            type_name: instance.type_name().to_string(),
+                            fields: HashMap::new(), // TODO: Extract actual fields
+                        })
+                        .collect();
+                    return Ok(EvalValue::List(eval_instances));
+                } else {
+                    return Err(Error::Validation(ValidationError {
+                        message: "all() expects a Type argument".to_string(),
+                        value_type: "function".to_string(),
+                    }));
+                }
             }
             
             // With unified syntax, all functions can have multiple implementations
@@ -334,15 +359,22 @@ pub fn evaluate_expression(
             if let Expression::Identifier(type_name) = &**obj {
                 // Check if this identifier is a type name in the registry
                 if registry.constructors.contains_key(type_name) {
-                    // Handle Type-as-Relation methods
+                    // Handle Type-as-Relation methods by delegating to built-in functions
                     match method.as_str() {
                         "all" if args.is_empty() => {
+                            // Delegate to the built-in all() function
                             let instances = registry.get_all_instances(type_name);
-                            // Convert instances to EvalValue
-                            // For now, return a string representation
-                            Ok(EvalValue::String(format!("{} instances of {}", instances.len(), type_name)))
+                            let eval_instances: Vec<EvalValue> = instances
+                                .into_iter()
+                                .map(|instance| EvalValue::Value {
+                                    type_name: instance.type_name().to_string(),
+                                    fields: HashMap::new(), // TODO: Extract actual fields
+                                })
+                                .collect();
+                            Ok(EvalValue::List(eval_instances))
                         }
                         "count" if args.is_empty() => {
+                            // For now, keep count as special case until we implement pure Relic functions
                             let count = registry.count_instances(type_name);
                             Ok(EvalValue::Integer(count as i64))
                         }
@@ -451,6 +483,11 @@ pub fn evaluate_expression(
                 }))
             }
         }
+
+        Expression::TypeLiteral(type_name) => {
+            // Return a Type value for Type-as-Relation
+            Ok(EvalValue::Type(type_name.clone()))
+        }
     }
 }
 
@@ -467,6 +504,14 @@ fn value_to_expression(val: EvalValue) -> Result<Expression> {
                 value_type: type_name,
             }))
         }
+        EvalValue::Type(type_name) => Ok(Expression::TypeLiteral(type_name)),
+        EvalValue::List(_items) => {
+            // For now, create a placeholder - in a full implementation we'd need list literals
+            Err(Error::Validation(ValidationError {
+                message: "Cannot convert List to expression".to_string(),
+                value_type: "List".to_string(),
+            }))
+        }
     }
 }
 
@@ -479,6 +524,8 @@ fn matches_type(ty: &crate::types::Type, value: &EvalValue) -> bool {
         (crate::types::Type::Value(type_name), EvalValue::Value { type_name: val_type, .. }) => {
             type_name == val_type
         },
+        (crate::types::Type::Type, EvalValue::Type(_)) => true,
+        (crate::types::Type::List(_), EvalValue::List(_)) => true, // TODO: Check element types
         (crate::types::Type::Any, _) => true, // Any matches everything
         _ => false,
     }
@@ -491,6 +538,8 @@ fn get_value_type_signature(value: &EvalValue) -> String {
         EvalValue::Integer(_) => "Int".to_string(),
         EvalValue::Boolean(_) => "Bool".to_string(),
         EvalValue::Value { type_name, .. } => type_name.clone(),
+        EvalValue::Type(_) => "Type".to_string(),
+        EvalValue::List(_) => "List".to_string(),
     }
 }
 
@@ -623,6 +672,8 @@ fn calculate_function_specificity(func: &crate::ast::FunctionDeclaration, arg_va
             crate::types::Type::String => 3,
             crate::types::Type::Bool => 3,
             crate::types::Type::Value(_) => 3,
+            crate::types::Type::Type => 3,
+            crate::types::Type::List(_) => 3,
             crate::types::Type::Any => 1,     // Any is least specific
             crate::types::Type::Unknown => 0,
         };
@@ -645,6 +696,8 @@ fn calculate_method_specificity(method: &crate::ast::MethodDeclaration, arg_valu
             crate::types::Type::String => 3,
             crate::types::Type::Bool => 3,
             crate::types::Type::Value(_) => 3,
+            crate::types::Type::Type => 3,
+            crate::types::Type::List(_) => 3,
             crate::types::Type::Any => 1,     // Any is least specific
             crate::types::Type::Unknown => 0,
         };
@@ -666,6 +719,17 @@ impl std::fmt::Display for EvalValue {
             EvalValue::Boolean(b) => write!(f, "{}", b),
             EvalValue::Value { type_name, fields } => {
                 write!(f, "{}({:?})", type_name, fields)
+            },
+            EvalValue::Type(type_name) => write!(f, "Type({})", type_name),
+            EvalValue::List(items) => {
+                write!(f, "[")?;
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", item)?;
+                }
+                write!(f, "]")
             },
         }
     }
