@@ -1,0 +1,25 @@
+// Test unified function syntax
+
+// Using 'method' keyword (backward compatibility)
+method double(x: Int) -> Int {
+    x * 2
+}
+
+// Using 'fn' keyword with multiple dispatch
+fn triple(x: Int) -> Int {
+    x * 3
+}
+
+// Add another implementation with same name
+fn triple(x: String) -> String {
+    x  // TODO: string concat
+}
+
+// Test calls
+double(5)
+triple(7)
+triple("hello")
+
+// UFC syntax
+10.double()
+20.triple()

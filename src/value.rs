@@ -23,8 +23,8 @@ pub struct ValueConstructor {
 
 pub struct ValueRegistry {
     constructors: HashMap<String, ValueConstructor>,
-    functions: HashMap<String, FunctionDeclaration>,
-    methods: HashMap<String, Vec<MethodDeclaration>>,
+    // Unified storage: all functions can have multiple implementations
+    functions: HashMap<String, Vec<FunctionDeclaration>>,
 }
 
 impl ValueRegistry {
@@ -32,7 +32,6 @@ impl ValueRegistry {
         Self {
             constructors: HashMap::new(),
             functions: HashMap::new(),
-            methods: HashMap::new(),
         }
     }
 
@@ -41,21 +40,43 @@ impl ValueRegistry {
     }
 
     pub fn register_function(&mut self, func_decl: FunctionDeclaration) {
-        self.functions.insert(func_decl.name.clone(), func_decl);
+        self.functions.entry(func_decl.name.clone())
+            .or_insert_with(Vec::new)
+            .push(func_decl);
     }
 
     pub fn get_function(&self, name: &str) -> Option<&FunctionDeclaration> {
+        // For backward compatibility, return the first function if only one exists
+        self.functions.get(name).and_then(|funcs| {
+            if funcs.len() == 1 {
+                funcs.first()
+            } else {
+                None
+            }
+        })
+    }
+    
+    pub fn get_functions(&self, name: &str) -> Option<&Vec<FunctionDeclaration>> {
         self.functions.get(name)
     }
     
     pub fn register_method(&mut self, method_decl: MethodDeclaration) {
-        self.methods.entry(method_decl.name.clone())
-            .or_insert_with(Vec::new)
-            .push(method_decl);
+        // Convert method to function for unified storage
+        let func_decl = FunctionDeclaration {
+            name: method_decl.name.clone(),
+            parameters: method_decl.parameters.iter().map(|p| crate::ast::Parameter {
+                name: p.name.clone(),
+                ty: p.ty.clone(),
+            }).collect(),
+            return_type: method_decl.return_type.clone(),
+            body: method_decl.body.clone(),
+        };
+        self.register_function(func_decl);
     }
     
     pub fn get_methods(&self, name: &str) -> Option<&Vec<MethodDeclaration>> {
-        self.methods.get(name)
+        // For backward compatibility during transition
+        None
     }
 
     pub fn execute_function(&self, name: &str, args: Vec<Box<dyn Any + Send + Sync>>) -> Result<Box<dyn Any + Send + Sync>> {

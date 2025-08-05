@@ -1,0 +1,4 @@
+// Test that 'method' works as alias for 'fn'
+method add(x: Int, y: Int) -> Int {
+    x + y
+}

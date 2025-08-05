@@ -6,7 +6,7 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
 ✅ **Phase 2 COMPLETED**: Parser, lexer, and basic language features (100% complete)
-🔲 **Phase 3 READY TO START**: Multiple dispatch system
+🚧 **Phase 3 IN PROGRESS**: Multiple dispatch system (~90% complete)
 🔲 **Phases 4-10**: Future work
 
 ### What's Working Now
@@ -22,6 +22,9 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - File input support via command-line arguments
 - Pattern matching (basic implementation)
 - Value equality and hashing
+- **Multiple dispatch system with type-based precedence**
+- **Unified function syntax (`method` as alias for `fn`)**
+- **UFC syntax works with multiple dispatch**
 - Comprehensive test suite and examples
 
 ### Recent Additions (February 2025)
@@ -38,11 +41,17 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - ✅ Functions can call other functions
 - ✅ Expression evaluator supporting all language features
 - ✅ **Uniform Function Call Syntax (UFC)** - `x.f(y)` as sugar for `f(x, y)`
+- ✅ **Multiple dispatch with type-based precedence**
+- ✅ **Unified function syntax** - `method` is now an alias for `fn`
+- ✅ **Compile-time ambiguity detection** for multiple dispatch
+- ✅ **Automatic dispatch optimization** - single impl = direct call, multiple = dispatch
 - ✅ Tests for all new features
-- ✅ Example files for all features including UFC
+- ✅ Example files for all features including UFC and multiple dispatch
 
 ### Progress Summary
-Phase 2 is now **100% complete**! All core language features are working:
+Phase 2 is **100% complete** and Phase 3 is **~90% complete**!
+
+**Phase 2 Features (Complete):**
 - Value types with validation predicates ✅
 - Expression evaluation with let-bindings ✅
 - Functional composition with pipelines ✅
@@ -53,7 +62,15 @@ Phase 2 is now **100% complete**! All core language features are working:
 - Complete comment support (single and multi-line) ✅
 - Interactive REPL with file support ✅
 
-Phase 3: Multiple Dispatch is now ready to begin.
+**Phase 3 Features (90% Complete):**
+- Multiple dispatch system ✅
+- Type-based precedence rules ✅
+- Compile-time ambiguity detection ✅
+- Unified function syntax (`method` as alias for `fn`) ✅
+- UFC integration with dispatch ✅
+- Automatic dispatch optimization ✅
+- Parameter guards (parsed but not evaluated) 🚧
+- Performance optimizations 🔲
 
 ## Core Philosophy
 

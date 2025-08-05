@@ -1,0 +1,15 @@
+// Unified Function Syntax Demo
+// Shows how 'method' is now just an alias for 'fn'
+
+// Old style - still works!
+method greet(name: String) -> String {
+    name  // TODO: string concat when implemented
+}
+
+// New style - preferred
+fn greet(number: Int) -> String {
+    "Number"  // TODO: convert int to string
+}
+
+// Both create functions that can be dispatched
+// The compiler automatically handles multiple implementations

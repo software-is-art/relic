@@ -26,7 +26,10 @@ impl Compiler {
         match declaration {
             Declaration::Value(value_decl) => self.compile_value_declaration(value_decl),
             Declaration::Function(func_decl) => self.compile_function_declaration(func_decl),
-            Declaration::Method(method_decl) => self.compile_method_declaration(method_decl),
+            Declaration::Method(method_decl) => {
+                // For backward compatibility, compile methods as functions
+                self.compile_method_declaration(method_decl)
+            },
         }
     }
 

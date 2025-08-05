@@ -35,7 +35,46 @@ impl Parser {
         match &self.current_token {
             Token::Value => Ok(Declaration::Value(self.parse_value_declaration()?)),
             Token::Fn => Ok(Declaration::Function(self.parse_function_declaration()?)),
-            Token::Method => Ok(Declaration::Method(self.parse_method_declaration()?)),
+            Token::Method => {
+                // Treat 'method' as an alias for 'fn' - parse it as a function
+                self.advance()?; // consume 'method' token
+                let name = self.expect_identifier()?;
+                self.expect(Token::LeftParen)?;
+                
+                let mut parameters = Vec::new();
+                while self.current_token != Token::RightParen {
+                    // Support parameter guards for unified syntax
+                    let param_with_guard = self.parse_parameter_with_guard()?;
+                    // For now, convert to regular Parameter (guards will be handled later)
+                    parameters.push(Parameter {
+                        name: param_with_guard.name,
+                        ty: param_with_guard.ty,
+                    });
+                    if self.current_token == Token::Comma {
+                        self.advance()?;
+                    } else if self.current_token != Token::RightParen {
+                        return Err(Error::Parser(ParserError {
+                            message: "Expected ',' or ')' after parameter".to_string(),
+                            line: self.line,
+                            column: self.column,
+                        }));
+                    }
+                }
+                
+                self.expect(Token::RightParen)?;
+                self.expect(Token::ReturnArrow)?;
+                let return_type = self.parse_type()?;
+                self.expect(Token::LeftBrace)?;
+                let body = self.parse_expression()?;
+                self.expect(Token::RightBrace)?;
+                
+                Ok(Declaration::Function(FunctionDeclaration {
+                    name,
+                    parameters,
+                    return_type,
+                    body,
+                }))
+            },
             _ => Err(Error::Parser(ParserError {
                 message: format!("Expected 'value', 'fn', or 'method' keyword, found {:?}", self.current_token),
                 line: self.line,
@@ -71,7 +110,13 @@ impl Parser {
         
         let mut parameters = Vec::new();
         while self.current_token != Token::RightParen {
-            parameters.push(self.parse_parameter()?);
+            // Support parameter guards for unified syntax
+            let param_with_guard = self.parse_parameter_with_guard()?;
+            // For now, convert to regular Parameter (guards will be handled later)
+            parameters.push(Parameter {
+                name: param_with_guard.name,
+                ty: param_with_guard.ty,
+            });
             if self.current_token == Token::Comma {
                 self.advance()?;
             } else if self.current_token != Token::RightParen {
@@ -555,6 +600,7 @@ mod tests {
                     ),
                 }
             }
+            _ => panic!("Expected value declaration")
         }
     }
 
@@ -584,6 +630,7 @@ mod tests {
                     _ => panic!("Expected pipeline expression"),
                 }
             }
+            _ => panic!("Expected value declaration")
         }
     }
 
@@ -618,6 +665,7 @@ mod tests {
                     ),
                 }
             }
+            _ => panic!("Expected value declaration")
         }
     }
 
@@ -650,6 +698,7 @@ mod tests {
                     _ => panic!("Expected let expression"),
                 }
             }
+            _ => panic!("Expected value declaration")
         }
     }
 
@@ -704,6 +753,7 @@ mod tests {
                     _ => panic!("Expected let expression"),
                 }
             }
+            _ => panic!("Expected value declaration")
         }
     }
 
@@ -761,6 +811,7 @@ mod tests {
                     _ => panic!("Expected match expression, got: {:?}", v.body.validate),
                 }
             }
+            _ => panic!("Expected value declaration")
         }
     }
 }

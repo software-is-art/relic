@@ -115,30 +115,36 @@ pub fn evaluate_expression(
                 arg_values.push(evaluate_expression(arg, context, registry)?);
             }
             
-            // First check if it's a function
-            if let Some(func_decl) = registry.get_function(name) {
-                // Handle as a function call
-                // Check argument count
-                if arg_values.len() != func_decl.parameters.len() {
-                    return Err(Error::Validation(ValidationError {
-                        message: format!(
-                            "Function {} expects {} arguments, got {}",
-                            name,
-                            func_decl.parameters.len(),
-                            arg_values.len()
-                        ),
-                        value_type: "function".to_string(),
-                    }));
+            // With unified syntax, all functions can have multiple implementations
+            if let Some(functions) = registry.get_functions(name) {
+                // If only one function, execute it directly
+                if functions.len() == 1 {
+                    let func_decl = &functions[0];
+                    // Check argument count
+                    if arg_values.len() != func_decl.parameters.len() {
+                        return Err(Error::Validation(ValidationError {
+                            message: format!(
+                                "Function {} expects {} arguments, got {}",
+                                name,
+                                func_decl.parameters.len(),
+                                arg_values.len()
+                            ),
+                            value_type: "function".to_string(),
+                        }));
+                    }
+                    
+                    // Create new context with function parameters
+                    let mut func_context = HashMap::new();
+                    for (param, value) in func_decl.parameters.iter().zip(arg_values.iter()) {
+                        func_context.insert(param.name.clone(), value.clone());
+                    }
+                    
+                    // Evaluate function body
+                    evaluate_expression(&func_decl.body, &func_context, registry)
+                } else {
+                    // Multiple implementations - use dispatch
+                    dispatch_function(name, functions, &arg_values, context, registry)
                 }
-                
-                // Create new context with function parameters
-                let mut func_context = HashMap::new();
-                for (param, value) in func_decl.parameters.iter().zip(arg_values.iter()) {
-                    func_context.insert(param.name.clone(), value.clone());
-                }
-                
-                // Evaluate function body
-                evaluate_expression(&func_decl.body, &func_context, registry)
             } else if let Some(methods) = registry.get_methods(name) {
                 // Handle as a method call with multiple dispatch
                 // Find the best matching method based on argument types and specificity
@@ -260,8 +266,8 @@ pub fn evaluate_expression(
         }
         
         Expression::MethodCall(obj, method, args) => {
-            // First check if this is a user-defined function (UFC syntax)
-            if let Some(_func_decl) = registry.get_function(method) {
+            // With unified syntax, check if this is a user-defined function (UFC syntax)
+            if let Some(_functions) = registry.get_functions(method) {
                 // Transform x.f(y, z) into f(x, y, z)
                 let mut full_args = vec![obj.as_ref().clone()];
                 full_args.extend(args.clone());
@@ -272,7 +278,7 @@ pub fn evaluate_expression(
                 );
             }
             
-            // Check if this is a method (UFC syntax for methods)
+            // For backward compatibility, check if this is a method
             if let Some(_methods) = registry.get_methods(method) {
                 // Transform x.f(y, z) into f(x, y, z) for method dispatch
                 let mut full_args = vec![obj.as_ref().clone()];
@@ -356,6 +362,80 @@ fn matches_type(ty: &crate::types::Type, value: &EvalValue) -> bool {
 
 // Calculate specificity score for a method based on parameter types
 // Higher score means more specific
+fn dispatch_function(
+    name: &str,
+    functions: &[crate::ast::FunctionDeclaration],
+    arg_values: &[EvalValue],
+    _context: &HashMap<String, EvalValue>,
+    registry: &ValueRegistry,
+) -> Result<EvalValue> {
+    // Find the best matching function based on argument types and specificity
+    let mut candidates = Vec::new();
+    
+    for func in functions {
+        if func.parameters.len() != arg_values.len() {
+            continue;
+        }
+        
+        // Check if all parameters match
+        let matches = func.parameters.iter()
+            .zip(arg_values)
+            .all(|(param, value)| matches_type(&param.ty, value));
+            
+        if matches {
+            // Calculate specificity score for this function
+            let specificity = calculate_function_specificity(func, arg_values);
+            candidates.push((func, specificity));
+        }
+    }
+    
+    // Sort by specificity (higher is more specific)
+    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    
+    // Check for ambiguity - if top two have same specificity
+    if candidates.len() >= 2 && candidates[0].1 == candidates[1].1 {
+        return Err(Error::Validation(ValidationError {
+            message: format!("Ambiguous function call '{}' - multiple functions with same specificity", name),
+            value_type: "function".to_string(),
+        }));
+    }
+    
+    let best_match = candidates.first().map(|(func, _)| *func);
+    
+    if let Some(func) = best_match {
+        // Create new context with function parameters
+        let mut func_context = HashMap::new();
+        for (param, value) in func.parameters.iter().zip(arg_values.iter()) {
+            func_context.insert(param.name.clone(), value.clone());
+        }
+        
+        // Evaluate function body
+        evaluate_expression(&func.body, &func_context, registry)
+    } else {
+        Err(Error::Validation(ValidationError {
+            message: format!("No matching function '{}' found for given arguments", name),
+            value_type: "function".to_string(),
+        }))
+    }
+}
+
+fn calculate_function_specificity(func: &crate::ast::FunctionDeclaration, arg_values: &[EvalValue]) -> u32 {
+    let mut score = 0;
+    
+    for (param, _value) in func.parameters.iter().zip(arg_values) {
+        score += match &param.ty {
+            crate::types::Type::Int => 3,     // Specific types get higher scores
+            crate::types::Type::String => 3,
+            crate::types::Type::Bool => 3,
+            crate::types::Type::Value(_) => 3,
+            crate::types::Type::Any => 1,     // Any is least specific
+            crate::types::Type::Unknown => 0,
+        };
+    }
+    
+    score
+}
+
 fn calculate_method_specificity(method: &crate::ast::MethodDeclaration, arg_values: &[EvalValue]) -> u32 {
     let mut score = 0;
     

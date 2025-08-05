@@ -13,8 +13,8 @@ pub enum Type {
 #[derive(Debug, Clone)]
 pub struct TypeEnvironment {
     values: HashMap<String, ValueType>,
-    functions: HashMap<String, FunctionType>,
-    methods: HashMap<String, Vec<MethodSignature>>,
+    // Unified storage: all functions can have multiple implementations
+    functions: HashMap<String, Vec<FunctionType>>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +50,6 @@ impl TypeEnvironment {
         Self {
             values: HashMap::new(),
             functions: HashMap::new(),
-            methods: HashMap::new(),
         }
     }
 
@@ -68,18 +67,36 @@ impl TypeEnvironment {
             parameter_types,
             return_type,
         };
-        self.functions.insert(name, function_type);
+        self.functions.entry(name).or_insert_with(Vec::new).push(function_type);
     }
 
     pub fn get_function(&self, name: &str) -> Option<&FunctionType> {
+        // For backward compatibility, return the first function if only one exists
+        self.functions.get(name).and_then(|funcs| {
+            if funcs.len() == 1 {
+                funcs.first()
+            } else {
+                None
+            }
+        })
+    }
+    
+    pub fn get_functions(&self, name: &str) -> Option<&Vec<FunctionType>> {
         self.functions.get(name)
     }
     
+    // Methods are now just functions with multiple implementations
     pub fn define_method(&mut self, name: String, signature: MethodSignature) {
-        self.methods.entry(name).or_insert_with(Vec::new).push(signature);
+        let function_type = FunctionType {
+            name: name.clone(),
+            parameter_types: signature.parameter_types,
+            return_type: signature.return_type,
+        };
+        self.functions.entry(name).or_insert_with(Vec::new).push(function_type);
     }
     
     pub fn get_methods(&self, name: &str) -> Option<&Vec<MethodSignature>> {
-        self.methods.get(name)
+        // For backward compatibility during transition
+        None
     }
 }

@@ -88,11 +88,17 @@ impl TypeChecker {
     }
 
     fn check_function_declaration(&mut self, decl: &FunctionDeclaration) -> Result<()> {
-        // Check if function already exists
-        if self.env.get_function(&decl.name).is_some() {
-            return Err(Error::Type(TypeError {
-                message: format!("Function '{}' is already defined", decl.name),
-            }));
+        // With unified syntax, functions can have multiple implementations
+        // Check for exact duplicate (same parameter types)
+        if let Some(existing_funcs) = self.env.get_functions(&decl.name) {
+            let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();
+            for existing in existing_funcs {
+                if existing.parameter_types == param_types {
+                    return Err(Error::Type(TypeError {
+                        message: format!("Function '{}' with these parameter types is already defined", decl.name),
+                    }));
+                }
+            }
         }
 
         // Set up local environment for checking the function body
@@ -126,6 +132,18 @@ impl TypeChecker {
     }
 
     fn check_method_declaration(&mut self, decl: &MethodDeclaration) -> Result<()> {
+        // With unified syntax, check for exact duplicate (same parameter types)
+        if let Some(existing_funcs) = self.env.get_functions(&decl.name) {
+            let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();
+            for existing in existing_funcs {
+                if existing.parameter_types == param_types {
+                    return Err(Error::Type(TypeError {
+                        message: format!("Function '{}' with these parameter types is already defined", decl.name),
+                    }));
+                }
+            }
+        }
+        
         // Set up local environment for checking the method body
         self.locals.clear();
         for param in &decl.parameters {
@@ -270,35 +288,63 @@ impl TypeChecker {
             }),
 
             Expression::FunctionCall(name, args) => {
-                // First check if it's a function
-                if let Some(func_type) = self.env.get_function(name) {
-                    // Handle as a function call
-                    // Check argument count
-                    if args.len() != func_type.parameter_types.len() {
-                        return Err(Error::Type(TypeError {
-                            message: format!(
-                                "Function '{}' expects {} arguments, but {} provided",
-                                name,
-                                func_type.parameter_types.len(),
-                                args.len()
-                            ),
-                        }));
-                    }
-
-                    // Check argument types
-                    for (i, (arg, expected_type)) in args.iter().zip(&func_type.parameter_types).enumerate() {
-                        let arg_type = self.check_expression(arg)?;
-                        if arg_type != *expected_type {
+                // With unified syntax, all functions can have multiple implementations
+                if let Some(functions) = self.env.get_functions(name) {
+                    // Collect argument types
+                    let arg_types: Vec<Type> = args.iter()
+                        .map(|arg| self.check_expression(arg))
+                        .collect::<Result<Vec<_>>>()?;
+                    
+                    // If only one function, use simple type checking
+                    if functions.len() == 1 {
+                        let func_type = &functions[0];
+                        // Check argument count
+                        if args.len() != func_type.parameter_types.len() {
                             return Err(Error::Type(TypeError {
                                 message: format!(
-                                    "Function '{}' parameter {} expects {:?}, but {:?} provided",
-                                    name, i + 1, expected_type, arg_type
+                                    "Function '{}' expects {} arguments, but {} provided",
+                                    name,
+                                    func_type.parameter_types.len(),
+                                    args.len()
                                 ),
                             }));
                         }
+                        // Check argument types
+                        for (i, (actual, expected)) in arg_types.iter().zip(&func_type.parameter_types).enumerate() {
+                            if actual != expected {
+                                return Err(Error::Type(TypeError {
+                                    message: format!(
+                                        "Function '{}' parameter {} expects {:?}, but {:?} provided",
+                                        name, i + 1, expected, actual
+                                    ),
+                                }));
+                            }
+                        }
+                        Ok(func_type.return_type.clone())
+                    } else {
+                        // Multiple implementations - find matching one
+                        for func_type in functions {
+                            if func_type.parameter_types.len() != arg_types.len() {
+                                continue;
+                            }
+                            
+                            // Check if all parameter types match
+                            let matches = func_type.parameter_types.iter()
+                                .zip(&arg_types)
+                                .all(|(expected, actual)| expected == actual);
+                                
+                            if matches {
+                                return Ok(func_type.return_type.clone());
+                            }
+                        }
+                        
+                        Err(Error::Type(TypeError {
+                            message: format!(
+                                "No matching function '{}' found for argument types {:?}",
+                                name, arg_types
+                            ),
+                        }))
                     }
-
-                    Ok(func_type.return_type.clone())
                 } else if let Some(methods) = self.env.get_methods(name) {
                     // Handle as a method call with multiple dispatch
                     // Collect argument types
@@ -363,53 +409,80 @@ impl TypeChecker {
                     all_arg_types.push(self.check_expression(arg)?);
                 }
                 
-                // First check if this is a user-defined function (UFC syntax)
-                if let Some(func_type) = self.env.get_function(method) {
-                    // Transform x.f(y, z) into f(x, y, z) for type checking
-                    // Check that the function can accept the object as first parameter
-                    if func_type.parameter_types.is_empty() {
-                        return Err(Error::Type(TypeError {
-                            message: format!("Function {} takes no parameters", method),
-                        }));
-                    }
-                    
-                    if func_type.parameter_types[0] != object_type {
-                        return Err(Error::Type(TypeError {
-                            message: format!(
-                                "Cannot call {} on type {:?}, expected {:?}",
-                                method, object_type, func_type.parameter_types[0]
-                            ),
-                        }));
-                    }
-                    
-                    // Check remaining arguments
-                    if args.len() != func_type.parameter_types.len() - 1 {
-                        return Err(Error::Type(TypeError {
-                            message: format!(
-                                "Function {} expects {} arguments, got {}",
-                                method,
-                                func_type.parameter_types.len() - 1,
-                                args.len()
-                            ),
-                        }));
-                    }
-                    
-                    for (i, arg_type) in all_arg_types[1..].iter().enumerate() {
-                        let expected_type = &func_type.parameter_types[i + 1];
-                        if arg_type != expected_type {
+                // With unified syntax, check for all functions (UFC syntax)
+                if let Some(functions) = self.env.get_functions(method) {
+                    // If only one function implementation
+                    if functions.len() == 1 {
+                        let func_type = &functions[0];
+                        // Transform x.f(y, z) into f(x, y, z) for type checking
+                        // Check that the function can accept the object as first parameter
+                        if func_type.parameter_types.is_empty() {
+                            return Err(Error::Type(TypeError {
+                                message: format!("Function {} takes no parameters", method),
+                            }));
+                        }
+                        
+                        if func_type.parameter_types[0] != object_type {
                             return Err(Error::Type(TypeError {
                                 message: format!(
-                                    "Function {} parameter {} type mismatch: expected {:?}, got {:?}",
-                                    method, i + 2, expected_type, arg_type
+                                    "Cannot call {} on type {:?}, expected {:?}",
+                                    method, object_type, func_type.parameter_types[0]
                                 ),
                             }));
                         }
+                        
+                        // Check remaining arguments
+                        if args.len() != func_type.parameter_types.len() - 1 {
+                            return Err(Error::Type(TypeError {
+                                message: format!(
+                                    "Function {} expects {} arguments, got {}",
+                                    method,
+                                    func_type.parameter_types.len() - 1,
+                                    args.len()
+                                ),
+                            }));
+                        }
+                        
+                        for (i, arg_type) in all_arg_types[1..].iter().enumerate() {
+                            let expected_type = &func_type.parameter_types[i + 1];
+                            if arg_type != expected_type {
+                                return Err(Error::Type(TypeError {
+                                    message: format!(
+                                        "Function {} parameter {} type mismatch: expected {:?}, got {:?}",
+                                        method, i + 2, expected_type, arg_type
+                                    ),
+                                }));
+                            }
+                        }
+                        
+                        return Ok(func_type.return_type.clone());
+                    } else {
+                        // Multiple implementations - find matching one
+                        for func_type in functions {
+                            if func_type.parameter_types.len() != all_arg_types.len() {
+                                continue;
+                            }
+                            
+                            // Check if all parameter types match
+                            let matches = func_type.parameter_types.iter()
+                                .zip(&all_arg_types)
+                                .all(|(expected, actual)| expected == actual);
+                                
+                            if matches {
+                                return Ok(func_type.return_type.clone());
+                            }
+                        }
+                        
+                        return Err(Error::Type(TypeError {
+                            message: format!(
+                                "No matching function '{}' found for argument types {:?}",
+                                method, all_arg_types
+                            ),
+                        }));
                     }
-                    
-                    return Ok(func_type.return_type.clone());
                 }
                 
-                // Check if this is a method (UFC syntax for methods)
+                // For backward compatibility, check methods
                 if let Some(methods) = self.env.get_methods(method) {
                     // Find the best matching method
                     let mut best_match = None;
