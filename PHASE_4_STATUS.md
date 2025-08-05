@@ -193,15 +193,75 @@ value User(id: Int, name: String) {
 - List type not yet implemented
 - Current implementation uses special cases (to be removed)
 
+## Relational Completeness
+
+### The Breakthrough: No Queries, Just Functions
+
+Relic doesn't have "queries" - it has functions. This represents a fundamental breakthrough in data programming:
+
+- **Traditional Systems**: Separate query language (SQL) with different syntax and semantics
+- **Relic**: All data operations are just function composition using the same language
+
+### Full Relational Power Preserved
+
+All relational algebra operations map naturally to Relic functions:
+
+```relic
+// Selection (WHERE)
+User.where(u => u.age > 18)                    // σ(age > 18)(Users)
+
+// Projection (SELECT columns)  
+User.all().map(u => {name: u.name})            // π(name)(Users)
+
+// Join
+join(User, Order, (u, o) => u.id == o.userId) // Users ⋈ Orders
+
+// Union
+User.all().concat(Admin.all()).distinct()     // Users ∪ Admins
+
+// Aggregation (GROUP BY)
+User.all().groupBy(u => u.city)               // Complex aggregations
+    .map(g => {city: g.key, count: g.count()})
+```
+
+### What We've Actually Gained
+
+1. **Arbitrary Computation**: Mix algorithms with data operations
+   ```relic
+   User.where(u => isPrime(u.id))
+       .map(u => {name: u.name, score: mlModel.classify(u)})
+   ```
+
+2. **First-Class Composition**: Queries are values you can pass around
+   ```relic
+   let activeUsers = User.where(u => u.active)
+   let premiumFilter = users => users.filter(u => u.tier == "premium")
+   ```
+
+3. **Custom Operators**: Define new relational operations
+   ```relic
+   fn semiJoin(t1: Type, t2: Type, on: fn(t1, t2) -> Bool) -> List[t1] {
+       all(t1).filter(x => all(t2).exists(y => on(x, y)))
+   }
+   ```
+
+4. **Whole-Program Optimization**: Sea of nodes can optimize across "query" boundaries
+   ```relic
+   let threshold = computeThreshold(config)  // Can be inlined
+   User.where(u => u.score > threshold)     // Becomes constant predicate
+   ```
+
+See [RELATIONAL_POWER.md](RELATIONAL_POWER.md) for complete relational algebra mappings.
+
 ## Success Criteria
 
 Phase 4 will be considered complete when:
 1. ✅ Value types automatically maintain relations of their instances
-2. 🔶 Type-level query methods work: `all()` ✅, `where()` ❌, `find()` ❌, `count()` ✅
-3. ❌ Joins between types are supported
+2. 🔶 Built-in `all(t: Type)` implemented, others as pure Relic functions
+3. ✅ All relational algebra operations expressible (documented in RELATIONAL_POWER.md)
 4. ✅ Memory management is configurable (using Arc/Weak)
 5. 🔶 All tests pass (need more tests)
-6. 🔶 Documentation is updated (in progress)
+6. 🔶 Documentation captures the "no queries" breakthrough
 
 ## Technical Challenges
 

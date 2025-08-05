@@ -283,24 +283,46 @@ This means Relic can offer the flexibility of multiple dispatch with the perform
 
 ### Relational operations as graph transformations
 
-With Type-as-Relation, functional-relational operations map naturally to dataflow graphs:
+Relic doesn't have "queries" - it has function composition. This eliminates the artificial boundary between data operations and regular computation:
 
 ```relic
+// This isn't a "query" - it's just function composition
 User.all()
   .where(u => u.age > 21)
   .join(Order.all(), (u, o) => u.id == o.userId)
-  .select(u => {name: u.name, total: o.amount})
+  .map(pair => {name: pair.0.name, total: pair.1.amount})
 ```
 
-In the graph representation:
+In the sea of nodes representation:
 - Each value instance is a node in the graph
-- Type relations are node collections
-- Query operations are pure transformation nodes
+- Type relations are node collections  
+- "Query" operations are pure transformation nodes (no different from other functions)
 - Type information flows through the graph enabling optimization
-- Common subexpressions are automatically shared
+- **Crucially**: The compiler sees no distinction between "query code" and "regular code"
 
-The Type-as-Relation approach provides optimization opportunities:
-- No impedance mismatch between values and relations
+This enables optimizations impossible in traditional query systems:
+
+```relic
+let threshold = computeBusinessLogic(config)  // Regular computation
+User.where(u => u.score > threshold)         // "Query" operation
+    .filter(u => validateComplexRule(u))     // Mix of both
+
+// Sea of nodes can optimize across all these boundaries
+```
+
+The result: **relational operations with the full power of the programming language**, optimized as a unified whole rather than in isolation.
+
+### The philosophical breakthrough
+
+By eliminating the concept of "queries", Relic achieves something profound:
+
+1. **Unified Mental Model**: Developers think in one language, not two (application code + SQL)
+2. **Composability**: Any function that works on collections works in "queries"  
+3. **Extensibility**: New relational operations are just functions
+4. **Optimization**: Whole-program optimization exceeds isolated query optimization
+5. **Type Safety**: The full type system applies to all data operations
+
+This represents a fundamental shift: instead of bolting relational capabilities onto a programming language, we've made the programming language itself relationally complete.
 - Direct mapping to sea of nodes architecture
 - Instance tracking enables efficient indexing
 - Immutable values enable aggressive parallelization

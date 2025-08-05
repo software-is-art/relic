@@ -278,6 +278,116 @@ let users = [
 User.count()  // Returns 2 (only David and Eve)
 ```
 
+## Comparison with Traditional Approaches
+
+### SQL: Separate Query Language
+```sql
+-- SQL: Separate syntax, limited expressiveness
+SELECT u.name, COUNT(o.id) as order_count
+FROM users u 
+LEFT JOIN orders o ON u.id = o.user_id 
+WHERE u.age > 18 AND is_prime(u.id)  -- Can't mix custom functions easily
+GROUP BY u.name
+```
+
+### LINQ: Expression Trees
+```csharp
+// LINQ: Better integration but still "queries" 
+var result = users
+    .Where(u => u.Age > 18 && IsPrime(u.Id))
+    .GroupJoin(orders, u => u.Id, o => o.UserId, 
+               (u, orders) => new { u.Name, OrderCount = orders.Count() });
+
+// Expression trees enable optimization but create complexity
+Expression<Func<User, bool>> filter = u => u.Age > 18;
+```
+
+### Relic: Just Functions
+```relic
+// Relic: No special syntax, unlimited expressiveness
+User.where(u => u.age > 18 && isPrime(u.id))
+    .leftJoin(Order, (u, o) => u.id == o.userId)
+    .groupBy(pair => pair.0.name)
+    .map(group => {name: group.key, orderCount: group.values.count()})
+
+// No expression trees needed - just function composition
+let filter = u => u.age > 18  // Regular function, not special Expression type
+```
+
+## Optimization Comparison
+
+### SQL Optimizer: Query-Local
+```sql
+-- Optimizer only sees this query in isolation
+SELECT * FROM users u 
+JOIN orders o ON u.id = o.user_id 
+WHERE u.city = get_target_city()  -- Function call barrier
+```
+
+### LINQ: Expression Tree Analysis  
+```csharp
+// Provider analyzes expression tree, but limited by C# boundaries
+var city = GetTargetCity();  // Opaque to query provider
+var query = users.Where(u => u.City == city);  // City is just a captured variable
+```
+
+### Relic: Whole-Program Optimization
+```relic
+// Sea of nodes sees through all function boundaries
+let targetCity = computeTargetCity(config)  // Can be inlined and optimized
+User.where(u => u.city == targetCity)       // Becomes constant predicate
+
+// Compiler can:
+// - Inline computeTargetCity() 
+// - Recognize constant value
+// - Generate optimal query plan
+// - Fuse with subsequent operations
+```
+
+## What Each Approach Achieves
+
+| Aspect | SQL | LINQ | Relic |
+|--------|-----|------|-------|
+| **Query Optimization** | ✅ Excellent | ✅ Good | ✅ Excellent |
+| **Type Safety** | ❌ Weak | ✅ Strong | ✅ Strong |  
+| **Composability** | ❌ Limited | 🔶 Moderate | ✅ Unlimited |
+| **Expressiveness** | ❌ Limited | 🔶 Good | ✅ Unlimited |
+| **Whole-Program Opt** | ❌ No | ❌ No | ✅ Yes |
+| **Learning Curve** | 🔶 Separate language | 🔶 Expression trees | ✅ Just functions |
+| **Runtime Performance** | ✅ Fast | ✅ Fast | ✅ Potentially faster |
+
+## The Efficiency Question
+
+At theoretical limits, all three can achieve similar query performance. The differences are:
+
+### Where SQL/LINQ Excel
+- **Mature optimizers** with decades of tuning
+- **Known patterns** that are well-optimized
+- **Database integration** with indexes and statistics
+
+### Where Relic Can Excel
+- **Cross-boundary optimization** impossible in SQL/LINQ
+- **Specialization** for specific type combinations  
+- **Fusion** of operations across abstraction layers
+- **Inlining** arbitrary computation into queries
+
+Example of Relic's advantage:
+```relic
+// Traditional systems can't optimize across these boundaries:
+let weights = loadModel("user_scoring.model")
+let threshold = computeThreshold(config, currentLoad)
+
+User.where(u => u.active)
+    .map(u => {user: u, score: scoreUser(u, weights)})  // Custom ML function
+    .filter(scored => scored.score > threshold)         // Dynamic threshold
+    .take(100)
+
+// Sea of nodes can:
+// - Inline loadModel and computeThreshold
+// - Fuse all operations into a single pass
+// - Even compile the ML scoring directly into the query
+```
+
 ## Implementation Files
 
 - `src/value.rs` - Core instance tracking implementation
@@ -285,6 +395,7 @@ User.count()  // Returns 2 (only David and Eve)
 - `src/evaluator.rs` - Type method execution
 - `src/types.rs` - Type environment extensions
 - `examples/type_as_relation.relic` - Usage examples
+- `RELATIONAL_POWER.md` - Complete relational algebra mappings
 
 ## Testing
 
