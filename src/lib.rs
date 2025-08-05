@@ -5,6 +5,8 @@ pub mod evaluator;
 pub mod lexer;
 pub mod optimized_evaluator;
 pub mod parser;
+pub mod query;
+pub mod relation;
 pub mod specialization;
 pub mod typechecker;
 pub mod types;

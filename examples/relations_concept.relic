@@ -1,0 +1,72 @@
+// Relic: Relations as Value Constructors (Conceptual Example)
+// This shows how relations would work as value constructors
+// Note: This is a design concept - implementation in progress
+
+// Traditional Relic approach (what we're moving away from):
+// relation Users {
+//     id: Int,
+//     name: String,
+//     email: String
+// }
+
+// New approach: Relations are value constructors
+// The idea is that instead of special relation syntax, we use
+// regular value constructors that create relation values
+
+// Conceptually, relationOf would be a built-in function that
+// returns a value constructor:
+
+// value Users = relationOf({
+//     schema: {id: Int, name: String, email: String},
+//     key: "id"
+// })
+
+// For now, we can simulate this with regular value types:
+value UserRow(id: Int, name: String, email: String)
+
+// A relation would be a value that holds a collection of rows
+value UserRelation(rows: List<UserRow>) {
+    // In the full implementation, this would enforce:
+    // - Key uniqueness on id
+    // - Schema validation
+    // - Immutable operations
+}
+
+// Query operations would be regular functions:
+
+// Filter function (conceptual)
+fn where(relation: UserRelation, predicate: UserRow -> Bool) -> UserRelation {
+    // Filter rows based on predicate
+    // Return new relation with filtered rows
+    relation  // Placeholder
+}
+
+// Select/projection function (conceptual)
+fn select(relation: UserRelation, fields: List<String>) -> UserRelation {
+    // Project only specified fields
+    // Return new relation with projected schema
+    relation  // Placeholder
+}
+
+// Example usage (when fully implemented):
+
+// Create a relation value
+// let users = UserRelation([
+//     UserRow(1, "Alice", "alice@example.com"),
+//     UserRow(2, "Bob", "bob@example.com")
+// ])
+
+// Query with UFC syntax
+// let adults = users.where(u => u.age >= 18)
+// let names = users.select(["name"])
+
+// Benefits of this approach:
+// 1. No special syntax - relations are just values
+// 2. No code generation - everything is explicit
+// 3. Query operations are regular functions
+// 4. Full type safety through value types
+// 5. Composable with all Relic features
+// 6. Parse-don't-validate: constructor validates data
+
+// The key insight: Relations don't need to be special.
+// They're just value constructors that create validated collections.

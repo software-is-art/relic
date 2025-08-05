@@ -35,7 +35,6 @@ impl Parser {
         match &self.current_token {
             Token::Value => Ok(Declaration::Value(self.parse_value_declaration()?)),
             Token::Fn => Ok(Declaration::Function(self.parse_function_declaration()?)),
-            Token::Relation => Ok(Declaration::Relation(self.parse_relation_declaration()?)),
             Token::Method => {
                 // Treat 'method' as an alias for 'fn' - parse it as a function
                 self.advance()?; // consume 'method' token
@@ -168,70 +167,6 @@ impl Parser {
         })
     }
 
-    fn parse_relation_declaration(&mut self) -> Result<RelationDeclaration> {
-        self.expect(Token::Relation)?;
-        let name = self.expect_identifier()?;
-        self.expect(Token::LeftBrace)?;
-        
-        let mut fields = Vec::new();
-        let mut constraints = Vec::new();
-        
-        // Parse fields and constraints
-        while self.current_token != Token::RightBrace {
-            // Check if this is a constraint (key, foreign, unique)
-            match &self.current_token {
-                Token::Key => {
-                    self.advance()?;
-                    self.expect(Token::Colon)?;
-                    let field_name = self.expect_identifier()?;
-                    constraints.push(RelationConstraint::Key(vec![field_name]));
-                }
-                Token::Foreign => {
-                    self.advance()?;
-                    self.expect(Token::Colon)?;
-                    let field_name = self.expect_identifier()?;
-                    self.expect(Token::References)?;
-                    let target_relation = self.expect_identifier()?;
-                    self.expect(Token::Dot)?;
-                    let target_field = self.expect_identifier()?;
-                    constraints.push(RelationConstraint::Foreign {
-                        field: field_name,
-                        references_relation: target_relation,
-                        references_field: target_field,
-                    });
-                }
-                Token::Unique => {
-                    self.advance()?;
-                    self.expect(Token::Colon)?;
-                    let field_name = self.expect_identifier()?;
-                    constraints.push(RelationConstraint::Unique(vec![field_name]));
-                }
-                _ => {
-                    // Parse field declaration
-                    let field_name = self.expect_identifier()?;
-                    self.expect(Token::Colon)?;
-                    let field_type = self.parse_type()?;
-                    fields.push(RelationField {
-                        name: field_name,
-                        ty: field_type,
-                    });
-                }
-            }
-            
-            // Handle comma or newline separator
-            if self.current_token == Token::Comma {
-                self.advance()?;
-            }
-        }
-        
-        self.expect(Token::RightBrace)?;
-        
-        Ok(RelationDeclaration {
-            name,
-            fields,
-            constraints,
-        })
-    }
 
     fn parse_parameter(&mut self) -> Result<Parameter> {
         let name = self.expect_identifier()?;
@@ -452,22 +387,6 @@ impl Parser {
                         Token::Where => {
                             self.advance()?;
                             "where".to_string()
-                        }
-                        Token::Select => {
-                            self.advance()?;
-                            "select".to_string()
-                        }
-                        Token::Join => {
-                            self.advance()?;
-                            "join".to_string()
-                        }
-                        Token::Group => {
-                            self.advance()?;
-                            "group".to_string()
-                        }
-                        Token::Sort => {
-                            self.advance()?;
-                            "sort".to_string()
                         }
                         _ => return Err(Error::Parser(ParserError {
                             message: format!("Expected method name after '.', found {:?}", self.current_token),

@@ -152,14 +152,16 @@ The implementation follows a traditional compiler architecture:
 6. **Specialization** (`src/specialization.rs`): Compile-time optimization
 7. **Runtime** (`src/value.rs`): Value construction and function storage
 
-## Next Steps
+## Current Development
 
-See `IMPLEMENTATION_PLAN.md` for the full roadmap. Next phases include:
-- Multiple dispatch system
-- Functional-relational core
-- Advanced type system with row types and refinements
-- Effect system integration
-- Standard library
+Relic is under active development. Recent progress includes:
+- ✅ Complete multiple dispatch system with compile-time optimization
+- 🚧 Functional-relational core (25% complete) - Relations as value constructors
+- 📋 Advanced type system with row types and refinements
+- 📋 Effect system integration
+- 📋 Standard library
+
+See `IMPLEMENTATION_PLAN.md` for the detailed roadmap and `PHASE_4_STATUS.md` for current work on relations.
 
 ## Contributing
 

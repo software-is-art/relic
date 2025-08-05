@@ -1,0 +1,81 @@
+// Relic: Relations as Value Constructors
+// This demonstrates the new approach where relations are not special declarations
+// but rather value constructors that create validated collections
+
+// Instead of special relation syntax, we use value constructors
+// The relationOf function returns a value constructor
+
+// Define a Users relation as a value constructor
+value Users = relationOf({
+    schema: {id: Int, name: String, email: String, age: Int},
+    key: "id",
+    unique: ["email"]
+})
+
+// Users is now a value constructor function that:
+// 1. Validates each row matches the schema
+// 2. Enforces key and unique constraints
+// 3. Returns a Relation value
+
+// Create a relation by calling the constructor
+let users = Users([
+    {id: 1, name: "Alice", email: "alice@example.com", age: 30},
+    {id: 2, name: "Bob", email: "bob@example.com", age: 25},
+    {id: 3, name: "Charlie", email: "charlie@example.com", age: 35}
+])
+
+// The relation value carries its schema
+// users.schema => {id: Int, name: String, email: String, age: Int}
+
+// Query operations are just functions on relation values
+fn where(rel: Relation, predicate: Row -> Bool) -> Relation {
+    // Filter rows based on predicate
+    rel.filter(predicate)
+}
+
+fn select(rel: Relation, fields: List<String>) -> Relation {
+    // Project specific fields
+    rel.project(fields)
+}
+
+// Using query functions with UFC syntax
+let adults = users.where(row => row.age >= 30)
+let emails = users.select(["name", "email"])
+
+// Joins work by combining relations
+fn join(left: Relation, right: Relation, on: (Row, Row) -> Bool) -> Relation {
+    // Combine rows where condition is true
+    left.join(right, on)
+}
+
+// Define Orders relation
+value Orders = relationOf({
+    schema: {id: Int, userId: Int, product: String, amount: Float},
+    key: "id"
+})
+
+let orders = Orders([
+    {id: 101, userId: 1, product: "Book", amount: 29.99},
+    {id: 102, userId: 2, product: "Pen", amount: 4.50}
+])
+
+// Join users and orders
+let userOrders = users.join(orders, (u, o) => u.id == o.userId)
+
+// Benefits of this approach:
+// 1. No Magic: Relations are just value constructors, no code generation
+// 2. Explicit: You can see exactly what Users is - a constructor function
+// 3. Composable: Relations compose like any other values
+// 4. Type Safe: Schema information is part of the value
+// 5. Parse Don't Validate: Constructor validates all data on entry
+// 6. Unified: Everything follows Relic's existing patterns
+
+// The relationOf function is built-in and works like:
+// fn relationOf(config: RelationConfig) -> ValueConstructor<List<Row>, Relation>
+
+// This means relations are first-class values that can be:
+// - Passed to functions
+// - Returned from functions
+// - Stored in variables
+// - Pattern matched
+// - Composed with other values

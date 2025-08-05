@@ -33,12 +33,14 @@ Relic is an experimental programming language that demonstrates how **parse-don'
 - ✅ Compile-time specialization for performance
 - ✅ Runtime dispatch caching
 
-### Phase 4: Functional-Relational Core ~15% Complete
-- ✅ Relation schema declarations (parsed)
-- ✅ Pure functional approach (no special query syntax)
-- 🚧 Relations as value types
-- 🚧 Query operations as regular functions
-- 🚧 Temporal support built-in
+### Phase 4: Functional-Relational Core ~25% Complete
+- ✅ **Relations as Value Constructors** (major design evolution)
+- ✅ Relation value type with schema and constraints
+- ✅ Removed all relation-specific syntax (cleaner architecture)
+- ✅ Basic query operations framework
+- 🚧 Built-in `relationOf` function
+- 🚧 Value cloning for queries
+- 🚧 Join and aggregation operations
 
 ### Phase 5+: Future Work
 - Advanced type system features (row types, refinement types)
@@ -96,6 +98,12 @@ cargo build --release               # Build optimized version
 - Single construction path through validation
 - Carry type-level proof of validity
 - Support for normalization during construction
+
+#### Relations as Value Constructors (New!)
+- Relations are not special syntax but value constructors
+- No code generation or hidden magic
+- Query operations are regular functions
+- Aligns with "everything is a value" philosophy
 
 ## Language Features
 
@@ -194,6 +202,8 @@ Key examples to understand the language:
 - `functions.relic` - Function definitions
 - `pipeline.relic` - Pipeline and UFC usage
 - `pattern_matching.relic` - Pattern matching examples
+- `relations_concept.relic` - Relations as values concept
+- `relations_as_values.relic` - New relation approach
 
 ## Important Files
 
@@ -201,6 +211,8 @@ Key examples to understand the language:
 - `DESIGN.md` - Theoretical foundations and philosophy
 - `IMPLEMENTATION_PLAN.md` - Detailed roadmap
 - `PHASE_3_UNIFIED_SYNTAX.md` - Unified function syntax design
+- `PHASE_4_STATUS.md` - Functional-relational progress
+- `RELATIONS_AS_VALUES.md` - New relation design
 - `README.md` - User-facing documentation
 
 ### Core Implementation
@@ -209,6 +221,8 @@ Key examples to understand the language:
 - `src/evaluator.rs` - Expression evaluation and dispatch
 - `src/specialization.rs` - Compile-time dispatch optimization
 - `src/optimized_evaluator.rs` - Specialized evaluation paths
+- `src/relation.rs` - Relation value type implementation
+- `src/query.rs` - Query operations on relations
 - `src/main.rs` - REPL implementation
 
 ## Current Limitations
@@ -218,6 +232,8 @@ Key examples to understand the language:
 3. **Basic pattern matching** - Only simple constructor patterns
 4. **Limited built-in functions** - Minimal standard library
 5. **No list/array literals** - Collections not yet implemented
+6. **Relations need value cloning** - Query operations incomplete
+7. **No `relationOf` built-in yet** - Relations can't be created in REPL
 
 ## Contributing Guidelines
 

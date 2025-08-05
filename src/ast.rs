@@ -10,7 +10,6 @@ pub enum Declaration {
     Value(ValueDeclaration),
     Function(FunctionDeclaration),
     Method(MethodDeclaration),
-    Relation(RelationDeclaration),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,29 +35,6 @@ pub struct MethodDeclaration {
     pub body: Expression,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct RelationDeclaration {
-    pub name: String,
-    pub fields: Vec<RelationField>,
-    pub constraints: Vec<RelationConstraint>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct RelationField {
-    pub name: String,
-    pub ty: Type,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum RelationConstraint {
-    Key(Vec<String>),           // Primary key fields
-    Unique(Vec<String>),        // Unique constraint fields
-    Foreign {
-        field: String,
-        references_relation: String,
-        references_field: String,
-    },
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {

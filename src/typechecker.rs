@@ -28,10 +28,6 @@ impl TypeChecker {
             Declaration::Value(value_decl) => self.check_value_declaration(value_decl),
             Declaration::Function(func_decl) => self.check_function_declaration(func_decl),
             Declaration::Method(method_decl) => self.check_method_declaration(method_decl),
-            Declaration::Relation(_relation_decl) => {
-                // TODO: Implement relation type checking in Phase 4
-                Ok(())
-            }
         }
     }
 

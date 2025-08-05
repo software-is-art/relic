@@ -18,18 +18,6 @@ pub enum Token {
     Where,
     Arrow,        // => for match arms
     ReturnArrow,  // -> for function return types
-    
-    // Relational keywords
-    Relation,
-    Select,
-    Join,
-    Group,
-    Sort,
-    On,
-    By,
-    Key,
-    Foreign,
-    References,
 
     // Identifiers and literals
     Identifier(String),
@@ -334,16 +322,6 @@ impl Lexer {
             "in" => Token::In,
             "match" => Token::Match,
             "where" => Token::Where,
-            "relation" => Token::Relation,
-            "select" => Token::Select,
-            "join" => Token::Join,
-            "group" => Token::Group,
-            "sort" => Token::Sort,
-            "on" => Token::On,
-            "by" => Token::By,
-            "key" => Token::Key,
-            "foreign" => Token::Foreign,
-            "references" => Token::References,
             _ => Token::Identifier(identifier.to_string()),
         };
 

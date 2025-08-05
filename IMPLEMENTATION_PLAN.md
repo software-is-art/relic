@@ -6,8 +6,9 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
 ✅ **Phase 2 COMPLETED**: Parser, lexer, and basic language features (100% complete)
-🚧 **Phase 3 IN PROGRESS**: Multiple dispatch system (~98% complete)
-🔲 **Phases 4-10**: Future work
+✅ **Phase 3 COMPLETED**: Multiple dispatch system (100% complete)
+🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~25% complete)
+🔲 **Phases 5-10**: Future work
 
 ### What's Working Now
 - Full lexer and parser for value type declarations and functions
@@ -28,25 +29,23 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - Comprehensive test suite and examples
 
 ### Recent Additions (February 2025)
-- ✅ Let-bindings (`let x = expr in body`) fully implemented
-- ✅ Support for nested let-bindings
-- ✅ Line comment support (`//`)
-- ✅ Multi-line comment support (`/* */`) with nesting
-- ✅ File input mode for processing `.relic` files
-- ✅ Pipeline operator `|>` fully implemented
-- ✅ Pattern matching on value types (basic implementation)
-- ✅ Value type equality (`==` and `!=` operators)
-- ✅ Hashing support for value objects
-- ✅ Function definitions with complete evaluation
-- ✅ Functions can call other functions
-- ✅ Expression evaluator supporting all language features
-- ✅ **Uniform Function Call Syntax (UFC)** - `x.f(y)` as sugar for `f(x, y)`
-- ✅ **Multiple dispatch with type-based precedence**
-- ✅ **Unified function syntax** - `method` is now an alias for `fn`
-- ✅ **Compile-time ambiguity detection** for multiple dispatch
-- ✅ **Automatic dispatch optimization** - single impl = direct call, multiple = dispatch
-- ✅ Tests for all new features
-- ✅ Example files for all features including UFC and multiple dispatch
+- ✅ **Relations as Value Constructors** - Major design evolution eliminating code generation
+- ✅ Implemented `Relation` as a proper value type with schema and constraints
+- ✅ Removed all relation-specific AST/parser/lexer code for cleaner architecture
+- ✅ Created basic query operations framework (`where`, `select`, `limit`, `count`)
+- ✅ Documented new approach in `RELATIONS_AS_VALUES.md`
+- ✅ Updated examples to demonstrate relations-as-values concept
+
+### Previously Completed Features
+- ✅ Multiple dispatch with type-based precedence and compile-time optimization
+- ✅ Unified function syntax (`method` is alias for `fn`)
+- ✅ Uniform Function Call Syntax (UFC) - `x.f(y)` as sugar for `f(x, y)`
+- ✅ Pipeline operator `|>` for functional composition
+- ✅ Pattern matching on value types
+- ✅ Let-bindings with nested support
+- ✅ Function definitions with full evaluation
+- ✅ Value equality and hashing
+- ✅ Multi-line comments with nesting
 
 ### Progress Summary
 Phase 2 is **100% complete** and Phase 3 is **~98% complete**!
@@ -197,52 +196,48 @@ Based on Julia and CLOS research:
 - [ ] Create specialized implementations per type combination
 - [ ] Build performance profiling for dispatch overhead
 
-## Phase 4: Functional-Relational Core (Weeks 13-16)
+## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~25% COMPLETE
 
-### 4.1 Relations as Value-Generating Constructs
-Following the unified value philosophy:
-- [x] Design relation declarations that generate value types
-- [ ] Generate row value types from relation schemas
-- [ ] Generate relation collection types 
-- [ ] Generate type-safe field constants
-- [ ] Build immutable fact storage with temporal support
-- [ ] Implement copy-on-write for efficient immutability
+### 4.1 Relations as Value Constructors ✅ NEW APPROACH
+Evolved from code generation to explicit value constructors:
+- [x] **Pivoted to relations-as-values** - No special syntax or magic
+- [x] Implement Relation as a proper value type
+- [x] Remove all relation-specific AST/parser code
+- [ ] Implement `relationOf` built-in function
+- [ ] Add proper value cloning mechanism
+- [ ] Enable relation creation in REPL
 
 ### 4.2 Pure Functional Query Implementation
 - [x] Design pure functional approach (no special query syntax)
-- [ ] Implement typed query operations:
+- [x] Basic query operation structure (`where`, `select`, `limit`, `count`)
+- [ ] Complete query implementations with value cloning:
   ```relic
-  fn where<T>(rel: Relation<T>, pred: T -> Bool) -> Relation<T>
-  fn select<T, U>(rel: Relation<T>, ...fields: Field<?, T>) -> Relation<U>
-  fn join<T, U, V>(left: Relation<T>, right: Relation<U>, on: (T, U) -> Bool) -> Relation<V>
+  // Instead of special syntax, relations are value constructors
+  value Users = relationOf({
+    schema: {id: Int, name: String, age: Int},
+    key: "id"
+  })
+  
+  // Queries are regular functions with UFC
+  let adults = users
+    |> where(u => u.age >= 18)
+    |> select(["name", "email"])
   ```
-- [ ] Type-safe field references replace strings:
-  ```relic
-  users
-    .where(u => u.age > 21)
-    .join(orders, (u, o) => u.id == o.userId)
-    .select(User.name, Order.total)
-  ```
-- [ ] Multiple dispatch for operation optimization:
-  ```relic
-  fn join(r1: HashIndexed, r2: Sorted) = hashJoin(r1, r2)
-  fn join(r1: Sorted, r2: Sorted) = mergeJoin(r1, r2)
-  ```
+- [ ] Implement join operations with type safety
+- [ ] Add aggregation functions (sum, avg, min, max)
+- [ ] Support grouping operations
+- [ ] Multiple dispatch for storage strategies
 - [ ] Temporal operations as first-class features
-- [ ] Set operations (union, intersect, difference)
-- [ ] No NULL - use value types throughout
 
 ### 4.3 Integration with Value System
-- [ ] Row values work seamlessly with existing value types:
-  ```relic
-  value User(id: UserId, email: EmailAddress, age: Age) {
-    // Generated from relation, but each field is a value type
-  }
-  ```
-- [ ] Relations validate foreign key relationships through types
-- [ ] Pattern matching works naturally with row values
-- [ ] UFC syntax applies to both relations and row values
-- [ ] Multiple dispatch enables storage optimization
+- [x] Relations are regular values (no special treatment)
+- [x] Schema validation at construction time
+- [x] Key and unique constraint enforcement
+- [ ] Row values as regular value objects
+- [ ] Pattern matching with relation values
+- [ ] UFC syntax for natural query chaining
+- [ ] Type inference for relation schemas
+- [ ] Foreign key relationships through types
 
 ## Phase 5: Advanced Type System (Weeks 17-20)
 
