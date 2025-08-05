@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::error::{Error, Result, ValidationError};
 use crate::specialization::SpecializationCache;
+use crate::stdlib;
 use crate::value::{ValueConstructor, ValueRegistry};
 use std::any::Any;
 use std::collections::HashMap;
@@ -12,8 +13,10 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn new() -> Self {
+        let mut registry = ValueRegistry::new();
+        stdlib::register_stdlib(&mut registry);
         Self {
-            registry: ValueRegistry::new(),
+            registry,
             specialization_cache: SpecializationCache::new(),
         }
     }

@@ -1,5 +1,6 @@
 use crate::ast::*;
 use crate::error::{Error, Result, ValidationError};
+use crate::relation::{Relation, Schema};
 use crate::value::ValueRegistry;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -247,6 +248,9 @@ pub fn evaluate_expression(
                         value_type: "method".to_string(),
                     }))
                 }
+            } else if name == "relationOf" {
+                // Special handling for relationOf
+                evaluate_relation_of(&arg_values)
             } else {
                 Err(Error::Validation(ValidationError {
                     message: format!("Unknown function or method: {}", name),

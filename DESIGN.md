@@ -151,43 +151,46 @@ join(users: HashIndexed[User], posts: SortedBy[Post, date]) =
   hashJoinSorted(users, posts)
 ```
 
-### Relations as Value-Generating Constructs
-A key innovation in Relic is that relation declarations generate multiple interconnected value types:
+### Type-as-Relation: The Ultimate Unity
+The key innovation in Relic is that **every value type implicitly forms a relation of all its instances**. There is no separate relation construct - types ARE relations:
 
 ```
-relation Users {
-  id: UserId,
-  name: String,
-  age: Int
-  
-  key: id
+// Define a value type - this automatically creates a relation
+value User(id: UserId, name: String, age: Int) {
+  validate: age >= 0
+  key: id           // Primary key for the implicit relation
+  unique: email     // Unique constraint on the implicit relation
 }
 
-// Automatically generates:
-value User(id: UserId, name: String, age: Int)     // Row type
-value UsersRelation(rows: InternalStorage<User>)   // Collection type
-const User.id: Field<UserId, User>                 // Field references
-const User.name: Field<String, User>
-const User.age: Field<Int, User>
+// Creating values automatically adds them to the type's relation
+let alice = User(1, "Alice", 30)
+let bob = User(2, "Bob", 25)
+
+// Query the type directly - no special relation object needed
+let adults = User.where(u => u.age >= 18)
+let user = User.find(u => u.id == 1)
+let count = User.count()
 ```
 
 This approach ensures:
-- Each row is a validated value object
-- Relations are immutable collections of row values
-- Field access is type-safe and refactorable
-- Pattern matching works naturally with rows
+- No distinction between values and relations
+- Type safety guarantees schema consistency
+- All instances are automatically indexed
+- Natural integration with the type system
 
 ### Functional-Relational Query Composition
-With relations as values and UFC syntax, queries become natural transformations:
+With Type-as-Relation and UFC syntax, queries become natural transformations on types:
 
 ```
-users
+User.all()
   .where(u => u.age > 21)
-  .join(orders, (u, o) => u.id == o.userId)
-  .group(User.city)
-  .select(city, orderCount: count(), avgAmount: avg(Order.amount))
+  .join(Order.all(), (u, o) => u.id == o.userId)
+  .groupBy(u => u.city)
+  .select(city, orderCount: count(), avgAmount: avg(o => o.amount))
   .where(r => r.orderCount > 10)
 ```
+
+Note that we query types directly - `User.all()` returns all User instances, not a separate relation object.
 
 ## Uniform Function Call Syntax as a Core Feature
 
@@ -280,27 +283,27 @@ This means Relic can offer the flexibility of multiple dispatch with the perform
 
 ### Relational operations as graph transformations
 
-With relations as values, functional-relational operations map naturally to dataflow graphs:
+With Type-as-Relation, functional-relational operations map naturally to dataflow graphs:
 
 ```relic
-users
+User.all()
   .where(u => u.age > 21)
-  .join(orders, (u, o) => u.id == o.userId)
-  .select(User.name, total: sum(Order.amount))
+  .join(Order.all(), (u, o) => u.id == o.userId)
+  .select(u => {name: u.name, total: o.amount})
 ```
 
 In the graph representation:
-- Each relation value is a node containing row values
+- Each value instance is a node in the graph
+- Type relations are node collections
 - Query operations are pure transformation nodes
-- Field references are compile-time constants
 - Type information flows through the graph enabling optimization
-- Common subexpressions (like filtered relations) are automatically shared
+- Common subexpressions are automatically shared
 
-The value-generating approach provides additional optimization opportunities:
-- Row types enable precise memory layout optimization
-- Field constants can be resolved at compile time
-- Relation types can specialize storage strategies through multiple dispatch
-- Immutable relations enable aggressive caching and parallelization
+The Type-as-Relation approach provides optimization opportunities:
+- No impedance mismatch between values and relations
+- Direct mapping to sea of nodes architecture
+- Instance tracking enables efficient indexing
+- Immutable values enable aggressive parallelization
 
 ### Performance implications
 
@@ -317,8 +320,8 @@ This compilation strategy ensures that Relic's elegant abstractions don't come a
 
 Based on the research, a practical implementation should:
 
-1. **Start with value-generating relations** where declarations create row types, collection types, and field constants
-2. **Use immutable value objects everywhere** - rows, relations, and fields are all values
+1. **Start with Type-as-Relation** where value types automatically track their instances
+2. **Use immutable value objects everywhere** - values are automatically part of their type's relation
 3. **Implement multiple dispatch** with compile-time specialization for performance
 4. **Provide pure functional query operations** without special syntax - just functions and UFC
 5. **Type-safe field references** eliminating string-based field access
@@ -326,7 +329,7 @@ Based on the research, a practical implementation should:
 7. **Include SMT solver integration** for automatic constraint verification
 8. **Support incremental adoption** through interop with existing databases and languages
 
-The key innovation is that **relations generate value types**, unifying Relic's philosophy:
+The key innovation is that **types ARE relations**, perfectly unifying Relic's philosophy:
 - Parse don't validate: Every row is a validated value object
 - Everything is a value: Relations, rows, and fields
 - Functional composition: Queries are pure function applications

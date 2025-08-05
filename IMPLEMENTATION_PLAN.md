@@ -7,7 +7,7 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
 ✅ **Phase 2 COMPLETED**: Parser, lexer, and basic language features (100% complete)
 ✅ **Phase 3 COMPLETED**: Multiple dispatch system (100% complete)
-🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~25% complete)
+🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~30% complete) - Type-as-Relation model
 🔲 **Phases 5-10**: Future work
 
 ### What's Working Now
@@ -29,12 +29,12 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - Comprehensive test suite and examples
 
 ### Recent Additions (February 2025)
-- ✅ **Relations as Value Constructors** - Major design evolution eliminating code generation
-- ✅ Implemented `Relation` as a proper value type with schema and constraints
-- ✅ Removed all relation-specific AST/parser/lexer code for cleaner architecture
-- ✅ Created basic query operations framework (`where`, `select`, `limit`, `count`)
-- ✅ Documented new approach in `RELATIONS_AS_VALUES.md`
-- ✅ Updated examples to demonstrate relations-as-values concept
+- ✅ **Type-as-Relation Model** - Revolutionary approach where types ARE relations
+- ✅ Designed architecture where every value type tracks its instances
+- ✅ No special relation syntax - relations emerge from the type system
+- ✅ Perfect alignment with sea of nodes compiler architecture
+- ✅ Updated design documents (PHASE_4_STATUS.md, RELATIONS_AS_VALUES.md, DESIGN.md)
+- ✅ Type-level query methods: `Type.all()`, `Type.where()`, `Type.find()`
 
 ### Previously Completed Features
 - ✅ Multiple dispatch with type-based precedence and compile-time optimization
@@ -196,48 +196,56 @@ Based on Julia and CLOS research:
 - [ ] Create specialized implementations per type combination
 - [ ] Build performance profiling for dispatch overhead
 
-## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~25% COMPLETE
+## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~30% COMPLETE
 
-### 4.1 Relations as Value Constructors ✅ NEW APPROACH
-Evolved from code generation to explicit value constructors:
-- [x] **Pivoted to relations-as-values** - No special syntax or magic
-- [x] Implement Relation as a proper value type
-- [x] Remove all relation-specific AST/parser code
-- [ ] Implement `relationOf` built-in function
-- [ ] Add proper value cloning mechanism
-- [ ] Enable relation creation in REPL
+### 4.1 Type-as-Relation Architecture ✅ REVOLUTIONARY APPROACH
+Every value type implicitly forms a relation of its instances:
+- [x] **Designed Type-as-Relation model** - Types ARE relations
+- [x] Architecture where value types track all instances
+- [x] No special relation syntax or types needed
+- [x] Query methods as type-level operations
+- [x] Perfect alignment with sea of nodes architecture
+- [x] Updated all design documentation
 
-### 4.2 Pure Functional Query Implementation
-- [x] Design pure functional approach (no special query syntax)
-- [x] Basic query operation structure (`where`, `select`, `limit`, `count`)
-- [ ] Complete query implementations with value cloning:
+### 4.2 Instance Tracking Infrastructure
+- [ ] Modify ValueRegistry to track instances by type
+- [ ] Add instance registration during value construction
+- [ ] Implement memory management (strong vs weak references)
+- [ ] Handle key and unique constraint validation
+- [ ] Efficient indexing for queries
+
+### 4.3 Type-Level Query Methods
+- [x] Design type methods: `all()`, `where()`, `find()`, `count()`
+- [ ] Implement type method evaluation in evaluator
+- [ ] Support for type identifiers in expressions
+- [ ] UFC syntax with type methods:
   ```relic
-  // Instead of special syntax, relations are value constructors
-  value Users = relationOf({
-    schema: {id: Int, name: String, age: Int},
-    key: "id"
-  })
+  // Define value type - automatically creates relation
+  value User(id: Int, name: String, email: String) {
+    validate: email contains "@"
+    key: id
+    unique: email
+  }
   
-  // Queries are regular functions with UFC
-  let adults = users
-    |> where(u => u.age >= 18)
-    |> select(["name", "email"])
+  // Query the type directly
+  let adults = User.where(u => u.age >= 18)
+  let user = User.find(u => u.id == 1)
+  let all = User.all()
   ```
-- [ ] Implement join operations with type safety
-- [ ] Add aggregation functions (sum, avg, min, max)
-- [ ] Support grouping operations
-- [ ] Multiple dispatch for storage strategies
-- [ ] Temporal operations as first-class features
 
-### 4.3 Integration with Value System
-- [x] Relations are regular values (no special treatment)
-- [x] Schema validation at construction time
-- [x] Key and unique constraint enforcement
-- [ ] Row values as regular value objects
-- [ ] Pattern matching with relation values
-- [ ] UFC syntax for natural query chaining
-- [ ] Type inference for relation schemas
-- [ ] Foreign key relationships through types
+### 4.4 Advanced Query Operations
+- [ ] Cross-type joins
+- [ ] Aggregation functions (sum, avg, min, max)
+- [ ] Group by operations
+- [ ] Pipeline operator with type methods
+- [ ] Temporal queries (as-of)
+
+### 4.5 Integration Benefits
+- [x] No distinction between values and relations
+- [x] Type safety guarantees schema consistency
+- [x] Natural constraints through value types
+- [ ] Automatic indexing of instances
+- [ ] Query optimization through specialization
 
 ## Phase 5: Advanced Type System (Weeks 17-20)
 

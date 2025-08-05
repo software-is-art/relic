@@ -8,6 +8,7 @@ pub mod parser;
 pub mod query;
 pub mod relation;
 pub mod specialization;
+pub mod stdlib;
 pub mod typechecker;
 pub mod types;
 pub mod value;
