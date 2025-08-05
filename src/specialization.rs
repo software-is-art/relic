@@ -224,6 +224,10 @@ pub fn specialize_function_calls(
         Expression::Literal(_) | Expression::Identifier(_) => {
             // No function calls to specialize
         }
+        Expression::Query(_query) => {
+            // TODO: Implement query specialization in Phase 4
+            // For now, no specialization for queries
+        }
     }
 }
 

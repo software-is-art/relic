@@ -42,6 +42,9 @@ impl Repl {
                 relic::ast::Declaration::Method(m) => {
                     result.push_str(&format!("Defined method: {}\n", m.name));
                 }
+                relic::ast::Declaration::Relation(r) => {
+                    result.push_str(&format!("Defined relation: {}\n", r.name));
+                }
             }
         }
 

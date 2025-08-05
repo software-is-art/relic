@@ -1,0 +1,43 @@
+// Test runtime dispatch caching
+// Define multiple implementations of the same function
+
+fn process(x: Int) -> Int {
+    x * 2
+}
+
+fn process(x: String) -> String {
+    x
+}
+
+fn process(x: Bool) -> Bool {
+    !x
+}
+
+// Test with guards
+fn abs(n: Int where n >= 0) -> Int { n }
+fn abs(n: Int where n < 0) -> Int { 0 - n }
+
+// Define a test function to call everything
+fn test_dispatch_cache() -> Int {
+    // Call the same functions multiple times
+    // The dispatch cache should speed up subsequent calls
+    let r1 = process(42) in         // First call: cache miss
+    let r2 = process(100) in        // Second call: cache hit (Int)
+    let r3 = process("hello") in    // First call for String: cache miss
+    let r4 = process("world") in    // Second call: cache hit (String)
+    let r5 = process(true) in       // First call for Bool: cache miss
+    let r6 = process(false) in      // Second call: cache hit (Bool)
+    
+    // Test guards with caching
+    let a1 = abs(5) in              // Cache miss
+    let a2 = abs(10) in             // Cache hit (positive Int)
+    let a3 = abs(-3) in             // Cache miss (negative Int with different guard)
+    let a4 = abs(-7) in             // Cache hit (negative Int)
+    
+    // The cache key includes argument types, so these use different cache entries
+    let r7 = process(42) in         // Cache hit (Int)
+    let r8 = process("test") in     // Cache hit (String)
+    
+    // Return something to complete the function
+    r1 + r2 + a1 + a2 + a3 + a4
+}

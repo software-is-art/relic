@@ -207,19 +207,24 @@ Following "Out of the Tar Pit" architecture:
 - [ ] Add time-based queries for historical data
 - [ ] Enforce user-input data only in essential state
 
-### 4.2 Relational Algebra with Value Types
-- [ ] Implement type-safe relational operations
-- [ ] Add Malloy-inspired source modeling:
+### 4.2 Pure Relational Algebra Implementation
+- [ ] Implement core relational operations as pure functions
+- [ ] UFC syntax for natural query composition:
+  ```relic
+  users
+    .where(age > 21)
+    .join(orders, on: users.id == orders.userId)
+    .group(by: city)
+    .select(city, orderCount: count())
   ```
-  users 
-    |> where(age > 21)
-    |> join(orders, on: userId)
-    |> group(by: city)
-    |> select(city, orderCount: count())
+- [ ] Multiple dispatch for operation optimization:
+  ```relic
+  fn join(r1: HashIndexed, r2: Sorted) = hashJoin(r1, r2)
+  fn join(r1: Sorted, r2: Sorted) = mergeJoin(r1, r2)
   ```
-- [ ] Create relationship-aware computing to prevent fan traps
-- [ ] Build composable query blocks as first-class values
-- [ ] Add automatic optimization based on value types
+- [ ] Temporal operations as first-class features
+- [ ] Set operations (union, intersect, difference)
+- [ ] No NULL - use value types throughout
 
 ### 4.3 Type-Level Relationships
 - [ ] Encode relationships through type dependencies:

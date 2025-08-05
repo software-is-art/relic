@@ -2,6 +2,23 @@ use crate::ast::*;
 use crate::error::{Error, Result, ValidationError};
 use crate::value::ValueRegistry;
 use std::collections::HashMap;
+use std::sync::RwLock;
+use std::sync::Arc;
+
+// Cache key for dispatch decisions
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DispatchKey {
+    function_name: String,
+    arg_type_signatures: Vec<String>,
+}
+
+// Cache entry storing the resolved function
+type DispatchCache = Arc<RwLock<HashMap<DispatchKey, usize>>>; // Stores index into function list
+
+// Create a thread-safe dispatch cache
+lazy_static::lazy_static! {
+    static ref DISPATCH_CACHE: DispatchCache = Arc::new(RwLock::new(HashMap::new()));
+}
 
 #[derive(Clone, Debug)]
 pub enum EvalValue {
@@ -360,6 +377,14 @@ pub fn evaluate_expression(
                 }))
             }
         }
+        
+        Expression::Query(_query) => {
+            // TODO: Implement query evaluation in Phase 4
+            Err(Error::Validation(ValidationError {
+                message: "Query evaluation not yet implemented".to_string(),
+                value_type: "query".to_string(),
+            }))
+        }
     }
 }
 
@@ -393,6 +418,26 @@ fn matches_type(ty: &crate::types::Type, value: &EvalValue) -> bool {
     }
 }
 
+// Get type signature for an EvalValue (used for cache keys)
+fn get_value_type_signature(value: &EvalValue) -> String {
+    match value {
+        EvalValue::String(_) => "String".to_string(),
+        EvalValue::Integer(_) => "Int".to_string(),
+        EvalValue::Boolean(_) => "Bool".to_string(),
+        EvalValue::Value { type_name, .. } => type_name.clone(),
+    }
+}
+
+// Create a cache key from function name and argument types
+fn create_dispatch_key(name: &str, arg_values: &[EvalValue]) -> DispatchKey {
+    DispatchKey {
+        function_name: name.to_string(),
+        arg_type_signatures: arg_values.iter()
+            .map(get_value_type_signature)
+            .collect(),
+    }
+}
+
 // Calculate specificity score for a method based on parameter types
 // Higher score means more specific
 fn dispatch_function(
@@ -402,10 +447,32 @@ fn dispatch_function(
     _context: &HashMap<String, EvalValue>,
     registry: &ValueRegistry,
 ) -> Result<EvalValue> {
+    // Create cache key
+    let cache_key = create_dispatch_key(name, arg_values);
+    
+    // Check cache first
+    {
+        let cache = DISPATCH_CACHE.read().unwrap();
+        if let Some(&func_index) = cache.get(&cache_key) {
+            if func_index < functions.len() {
+                let func = &functions[func_index];
+                // Create new context with function parameters
+                let mut func_context = HashMap::new();
+                for (param, value) in func.parameters.iter().zip(arg_values.iter()) {
+                    func_context.insert(param.name.clone(), value.clone());
+                }
+                
+                // Evaluate function body (cached path)
+                return evaluate_expression(&func.body, &func_context, registry);
+            }
+        }
+    }
+    
+    // Cache miss - perform full dispatch resolution
     // Find the best matching function based on argument types and specificity
     let mut candidates = Vec::new();
     
-    for func in functions {
+    for (index, func) in functions.iter().enumerate() {
         if func.parameters.len() != arg_values.len() {
             continue;
         }
@@ -440,25 +507,31 @@ fn dispatch_function(
             if guards_satisfied {
                 // Calculate specificity score for this function
                 let specificity = calculate_function_specificity(func, arg_values);
-                candidates.push((func, specificity));
+                candidates.push((index, func, specificity));
             }
         }
     }
     
     // Sort by specificity (higher is more specific)
-    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    candidates.sort_by(|a, b| b.2.cmp(&a.2));
     
     // Check for ambiguity - if top two have same specificity
-    if candidates.len() >= 2 && candidates[0].1 == candidates[1].1 {
+    if candidates.len() >= 2 && candidates[0].2 == candidates[1].2 {
         return Err(Error::Validation(ValidationError {
             message: format!("Ambiguous function call '{}' - multiple functions with same specificity", name),
             value_type: "function".to_string(),
         }));
     }
     
-    let best_match = candidates.first().map(|(func, _)| *func);
+    let best_match = candidates.first().map(|(index, func, _)| (*index, *func));
     
-    if let Some(func) = best_match {
+    if let Some((func_index, func)) = best_match {
+        // Store in cache for future lookups
+        {
+            let mut cache = DISPATCH_CACHE.write().unwrap();
+            cache.insert(cache_key, func_index);
+        }
+        
         // Create new context with function parameters
         let mut func_context = HashMap::new();
         for (param, value) in func.parameters.iter().zip(arg_values.iter()) {

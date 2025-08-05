@@ -10,6 +10,7 @@ pub enum Declaration {
     Value(ValueDeclaration),
     Function(FunctionDeclaration),
     Method(MethodDeclaration),
+    Relation(RelationDeclaration),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +34,30 @@ pub struct MethodDeclaration {
     pub parameters: Vec<ParameterWithGuard>,
     pub return_type: Type,
     pub body: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RelationDeclaration {
+    pub name: String,
+    pub fields: Vec<RelationField>,
+    pub constraints: Vec<RelationConstraint>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RelationField {
+    pub name: String,
+    pub ty: Type,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RelationConstraint {
+    Key(Vec<String>),           // Primary key fields
+    Unique(Vec<String>),        // Unique constraint fields
+    Foreign {
+        field: String,
+        references_relation: String,
+        references_field: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -68,6 +93,58 @@ pub enum Expression {
     Pipeline(Box<Expression>, Box<Expression>),
     Let(String, Box<Expression>, Box<Expression>), // let name = value in body
     Match(Box<Expression>, Vec<MatchArm>),
+    
+    // Relational operations
+    Query(Box<QueryExpression>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryExpression {
+    Relation(String),                          // Base relation
+    Where(Box<QueryExpression>, Expression),   // Filter
+    Select(Box<QueryExpression>, Vec<SelectItem>), // Projection
+    Join {
+        left: Box<QueryExpression>,
+        right: Box<QueryExpression>,
+        on: Expression,
+    },
+    Group {
+        source: Box<QueryExpression>,
+        by: Vec<String>,
+        aggregates: Vec<AggregateItem>,
+    },
+    Sort {
+        source: Box<QueryExpression>,
+        by: Vec<SortItem>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SelectItem {
+    Field(String),
+    Expression(String, Expression), // alias, expression
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AggregateItem {
+    pub name: String,
+    pub function: AggregateFunction,
+    pub field: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AggregateFunction {
+    Count,
+    Sum,
+    Avg,
+    Min,
+    Max,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SortItem {
+    pub field: String,
+    pub descending: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

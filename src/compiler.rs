@@ -33,6 +33,10 @@ impl Compiler {
                 // For backward compatibility, compile methods as functions
                 self.compile_method_declaration(method_decl)
             },
+            Declaration::Relation(_relation_decl) => {
+                // TODO: Implement relation compilation in Phase 4
+                Ok(())
+            }
         }
     }
 
