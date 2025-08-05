@@ -199,25 +199,29 @@ Based on Julia and CLOS research:
 
 ## Phase 4: Functional-Relational Core (Weeks 13-16)
 
-### 4.1 Essential State as Relations
-Following "Out of the Tar Pit" architecture:
-- [ ] Implement relations as sole storage for essential state
-- [ ] Create relation types with value object schemas
-- [ ] Build immutable fact storage (inspired by Datomic)
-- [ ] Add time-based queries for historical data
-- [ ] Enforce user-input data only in essential state
+### 4.1 Relations as Value-Generating Constructs
+Following the unified value philosophy:
+- [x] Design relation declarations that generate value types
+- [ ] Generate row value types from relation schemas
+- [ ] Generate relation collection types 
+- [ ] Generate type-safe field constants
+- [ ] Build immutable fact storage with temporal support
+- [ ] Implement copy-on-write for efficient immutability
 
-### 4.2 Pure Relational Algebra Implementation
+### 4.2 Pure Functional Query Implementation
 - [x] Design pure functional approach (no special query syntax)
-- [ ] Implement relations as value types
-- [ ] Create query operations as regular functions with multiple dispatch
-- [ ] UFC syntax works naturally with query functions:
+- [ ] Implement typed query operations:
+  ```relic
+  fn where<T>(rel: Relation<T>, pred: T -> Bool) -> Relation<T>
+  fn select<T, U>(rel: Relation<T>, ...fields: Field<?, T>) -> Relation<U>
+  fn join<T, U, V>(left: Relation<T>, right: Relation<U>, on: (T, U) -> Bool) -> Relation<V>
+  ```
+- [ ] Type-safe field references replace strings:
   ```relic
   users
-    .where(age > 21)
-    .join(orders, users.id == orders.userId)
-    .group([city])
-    .select([city, count()])
+    .where(u => u.age > 21)
+    .join(orders, (u, o) => u.id == o.userId)
+    .select(User.name, Order.total)
   ```
 - [ ] Multiple dispatch for operation optimization:
   ```relic
@@ -228,18 +232,17 @@ Following "Out of the Tar Pit" architecture:
 - [ ] Set operations (union, intersect, difference)
 - [ ] No NULL - use value types throughout
 
-### 4.3 Type-Level Relationships
-- [ ] Encode relationships through type dependencies:
-  ```
-  value Post {
-    author: User  // Direct dependency on User type
-    content: String
-    where author exists in Users
+### 4.3 Integration with Value System
+- [ ] Row values work seamlessly with existing value types:
+  ```relic
+  value User(id: UserId, email: EmailAddress, age: Age) {
+    // Generated from relation, but each field is a value type
   }
   ```
-- [ ] Replace foreign keys with type-level constraints
-- [ ] Implement compile-time relationship validation
-- [ ] Create inference for transitive relationships
+- [ ] Relations validate foreign key relationships through types
+- [ ] Pattern matching works naturally with row values
+- [ ] UFC syntax applies to both relations and row values
+- [ ] Multiple dispatch enables storage optimization
 
 ## Phase 5: Advanced Type System (Weeks 17-20)
 

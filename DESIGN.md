@@ -151,27 +151,42 @@ join(users: HashIndexed[User], posts: SortedBy[Post, date]) =
   hashJoinSorted(users, posts)
 ```
 
+### Relations as Value-Generating Constructs
+A key innovation in Relic is that relation declarations generate multiple interconnected value types:
+
+```
+relation Users {
+  id: UserId,
+  name: String,
+  age: Int
+  
+  key: id
+}
+
+// Automatically generates:
+value User(id: UserId, name: String, age: Int)     // Row type
+value UsersRelation(rows: InternalStorage<User>)   // Collection type
+const User.id: Field<UserId, User>                 // Field references
+const User.name: Field<String, User>
+const User.age: Field<Int, User>
+```
+
+This approach ensures:
+- Each row is a validated value object
+- Relations are immutable collections of row values
+- Field access is type-safe and refactorable
+- Pattern matching works naturally with rows
+
 ### Functional-Relational Query Composition
-Borrowing from Malloy's pipeline syntax and FRP's mathematical foundations:
-
-```
-users 
-  |> where(age > 21)
-  |> join(orders, on: userId)
-  |> group(by: city)
-  |> select(city, orderCount: count(), avgAmount: mean(amount))
-  |> where(orderCount > 10)
-```
-
-With Uniform Function Call (UFC) syntax, the same query becomes even more natural:
+With relations as values and UFC syntax, queries become natural transformations:
 
 ```
 users
-  .where(age > 21)
-  .join(orders, on: userId)
-  .group(by: city)
-  .select(city, orderCount: count(), avgAmount: mean(amount))
-  .where(orderCount > 10)
+  .where(u => u.age > 21)
+  .join(orders, (u, o) => u.id == o.userId)
+  .group(User.city)
+  .select(city, orderCount: count(), avgAmount: avg(Order.amount))
+  .where(r => r.orderCount > 10)
 ```
 
 ## Uniform Function Call Syntax as a Core Feature
@@ -265,20 +280,27 @@ This means Relic can offer the flexibility of multiple dispatch with the perform
 
 ### Relational operations as graph transformations
 
-Functional-relational operations map naturally to dataflow graphs:
+With relations as values, functional-relational operations map naturally to dataflow graphs:
 
 ```relic
 users
-  |> where(age > 21)
-  |> join(orders, on: userId)
-  |> select(name, total: sum(amount))
+  .where(u => u.age > 21)
+  .join(orders, (u, o) => u.id == o.userId)
+  .select(User.name, total: sum(Order.amount))
 ```
 
-Becomes a graph where:
-- Query optimization is graph transformation
-- Common subexpressions are automatically shared
-- Predicate pushdown is moving nodes in the graph
-- Join ordering is graph topology optimization
+In the graph representation:
+- Each relation value is a node containing row values
+- Query operations are pure transformation nodes
+- Field references are compile-time constants
+- Type information flows through the graph enabling optimization
+- Common subexpressions (like filtered relations) are automatically shared
+
+The value-generating approach provides additional optimization opportunities:
+- Row types enable precise memory layout optimization
+- Field constants can be resolved at compile time
+- Relation types can specialize storage strategies through multiple dispatch
+- Immutable relations enable aggressive caching and parallelization
 
 ### Performance implications
 
@@ -295,13 +317,20 @@ This compilation strategy ensures that Relic's elegant abstractions don't come a
 
 Based on the research, a practical implementation should:
 
-1. **Start with a strong type system** featuring row types, refinement types, and effect tracking
-2. **Use immutable value objects** as the core data abstraction with parse-don't-validate semantics
+1. **Start with value-generating relations** where declarations create row types, collection types, and field constants
+2. **Use immutable value objects everywhere** - rows, relations, and fields are all values
 3. **Implement multiple dispatch** with compile-time specialization for performance
-4. **Provide built-in relational algebra** operations that understand value types and their relationships
-5. **Enforce stratified architecture** through language-level separation of concerns
-6. **Include SMT solver integration** for automatic constraint verification
-7. **Support incremental adoption** through interop with existing databases and languages
-8. **Implement UFC syntax** to make functional and relational operations more approachable without sacrificing theoretical purity
+4. **Provide pure functional query operations** without special syntax - just functions and UFC
+5. **Type-safe field references** eliminating string-based field access
+6. **Enforce stratified architecture** through language-level separation of concerns
+7. **Include SMT solver integration** for automatic constraint verification
+8. **Support incremental adoption** through interop with existing databases and languages
 
-The convergence of these ideas - value objects embodying parse-don't-validate, functional-relational programming minimizing complexity, Malloy's intuitive data transformations, and multiple dispatch replacing control flow - creates a compelling vision for a new programming paradigm that is simultaneously more correct, more performant, and more expressive than current approaches.
+The key innovation is that **relations generate value types**, unifying Relic's philosophy:
+- Parse don't validate: Every row is a validated value object
+- Everything is a value: Relations, rows, and fields
+- Functional composition: Queries are pure function applications
+- Type safety: Field access is compile-time verified
+- Multiple dispatch: Storage strategies can be optimized per type
+
+This creates a programming paradigm where working with relational data is as natural, safe, and performant as working with simple values - because relations ARE values that generate other values.

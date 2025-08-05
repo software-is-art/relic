@@ -32,55 +32,63 @@ relation Orders {
 
 // Generates: Order value type, OrdersRelation type, Order.* fields
 
-// In the new approach, query operations would be implemented as regular functions
-// that operate on relation values. Here's how it would look:
+// Working with relation values:
 
-// Example query functions (would be built into the standard library):
-// fn where(rel: Relation, predicate: Expression) -> Relation { ... }
-// fn select(rel: Relation, fields: List) -> Relation { ... }
-// fn join(left: Relation, right: Relation, condition: Expression) -> Relation { ... }
-// fn group(rel: Relation, by: List) -> GroupedRelation { ... }
-// fn aggregate(grouped: GroupedRelation, ops: List) -> Relation { ... }
+// 1. Creating relation instances
+// let users: UsersRelation = Users([
+//     User(id: 1, name: "Alice", email: "alice@example.com", age: 30, city: "NYC"),
+//     User(id: 2, name: "Bob", email: "bob@example.com", age: 25, city: "LA")
+// ])
 
-// Query examples using the functional approach:
+// 2. Type-safe queries with field references
+// let adults: UsersRelation = users.where(u => u.age >= 18)
+// let nyUsers: UsersRelation = users.where(u => u.city == "NYC")
 
-// 1. Simple where clause - just a function call with UFC
-// let adults = users.where(age >= 18) in adults
+// 3. Field references are type-safe constants
+// let names = users.select(User.name, User.email)
+// // Compiler knows this returns a relation with {name: String, email: String}
 
-// 2. Select specific fields - would need list syntax or varargs
-// let names = users.select([name, email]) in names
+// 4. Working with individual rows
+// match users.find(u => u.id == 1) {
+//     Some(user: User) => println(user.name),  // "Alice"
+//     None => println("Not found")
+// }
 
-// 3. Chained query operations - natural with UFC
-// let nyAdults = users
-//     .where(city == "New York")
-//     .where(age >= 21)
-//     .select([name, email])
-// in nyAdults
+// 5. Type-safe joins
+// let userOrders = users.join(orders, (u, o) => u.id == o.userId)
+// // Result has type JoinedRelation<User, Order>
 
-// 4. Join operations - multiple dispatch could optimize based on relation types
-// let userOrders = users
-//     .join(orders, users.id == orders.userId)
-//     .select([users.name, orders.product, orders.amount])
-// in userOrders
+// 6. Aggregations return values, not relations
+// let userCount: Int = users.count()
+// let avgAge: Float = users.avg(User.age)
+// let oldestUser: Option<User> = users.maxBy(User.age)
 
-// 5. Aggregations - composable functions
-// let orderTotals = orders
-//     .group([userId])
-//     .aggregate([sum(amount), count()])
-// in orderTotals
+// 7. Set operations preserve types
+// let allUsers: UsersRelation = activeUsers.union(inactiveUsers)
+// let commonUsers: UsersRelation = list1.intersect(list2)
 
-// 6. Temporal queries - just another function
-// let historicalUsers = users
-//     .asOf("2024-01-01")
-//     .where(status == "active")
-// in historicalUsers
+// 8. Custom query functions with proper types
+// fn findAdults(users: UsersRelation) -> UsersRelation {
+//     users.where(u => u.age >= 18)
+// }
+//
+// fn topUsersByCity(users: UsersRelation, city: String, n: Int) -> UsersRelation {
+//     users
+//         .where(u => u.city == city)
+//         .sort(User.age.desc())
+//         .limit(n)
+// }
 
-// Benefits of this approach:
-// - No special parser support needed
-// - Users can define custom query operations
-// - Multiple dispatch enables optimization based on relation types
-// - Queries are just function compositions
-// - Relations are first-class values that can be passed around
+// Benefits of the value-generating approach:
+// - Each row is a validated value object (parse don't validate)
+// - Relations are immutable values that can be transformed
+// - Type safety throughout - no string-based field names
+// - Natural integration with pattern matching and UFC
+// - Multiple dispatch enables storage strategy optimization
+// - Users can extend with custom query operations
 
-// Note: Implementation of these query functions is future work.
-// This demonstrates how the syntax would look without special parser support.
+// Implementation notes:
+// - Relation declarations generate all necessary types at compile time
+// - Storage is copy-on-write for efficiency with immutability
+// - Field constants enable refactoring and IDE support
+// - Row values can be used independently of relations
