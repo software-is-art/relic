@@ -1,0 +1,43 @@
+// Demonstration of parameter guards in multiple dispatch
+
+// Function that only accepts positive integers
+fn abs_value(n: Int where n > 0) -> Int {
+    n
+}
+
+// Function that handles negative integers
+fn abs_value(n: Int where n < 0) -> Int {
+    0 - n
+}
+
+// Function that handles zero
+fn abs_value(n: Int where n == 0) -> Int {
+    0
+}
+
+// Even/odd classification with guards
+fn classify(n: Int where n % 2 == 0) -> String {
+    "even"
+}
+
+fn classify(n: Int where n % 2 == 1) -> String {
+    "odd"
+}
+
+// Range classification
+fn range_check(n: Int where n < 0) -> String {
+    "negative"
+}
+
+fn range_check(n: Int where n > 0 && n < 10) -> String {
+    "small positive"
+}
+
+fn range_check(n: Int where n >= 10) -> String {
+    "large"
+}
+
+// Fallback when no guard matches
+fn range_check(n: Int) -> String {
+    "zero"
+}

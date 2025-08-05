@@ -88,23 +88,25 @@ impl TypeChecker {
     }
 
     fn check_function_declaration(&mut self, decl: &FunctionDeclaration) -> Result<()> {
-        // With unified syntax, functions can have multiple implementations
-        // Check for exact duplicate (same parameter types)
-        if let Some(existing_funcs) = self.env.get_functions(&decl.name) {
-            let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();
-            for existing in existing_funcs {
-                if existing.parameter_types == param_types {
-                    return Err(Error::Type(TypeError {
-                        message: format!("Function '{}' with these parameter types is already defined", decl.name),
-                    }));
-                }
-            }
-        }
+        // With unified syntax and multiple dispatch, we allow multiple implementations
+        // with the same parameter types (they may have different guards)
 
         // Set up local environment for checking the function body
         self.locals.clear();
         for param in &decl.parameters {
             self.locals.insert(param.name.clone(), param.ty.clone());
+        }
+        
+        // Check guards if present
+        for param in &decl.parameters {
+            if let Some(ref guard) = param.guard {
+                let guard_type = self.check_expression(guard)?;
+                if guard_type != Type::Bool {
+                    return Err(Error::Type(TypeError {
+                        message: format!("Function guard must return Bool, found {:?}", guard_type),
+                    }));
+                }
+            }
         }
 
         // Type check the function body
@@ -132,17 +134,8 @@ impl TypeChecker {
     }
 
     fn check_method_declaration(&mut self, decl: &MethodDeclaration) -> Result<()> {
-        // With unified syntax, check for exact duplicate (same parameter types)
-        if let Some(existing_funcs) = self.env.get_functions(&decl.name) {
-            let param_types: Vec<Type> = decl.parameters.iter().map(|p| p.ty.clone()).collect();
-            for existing in existing_funcs {
-                if existing.parameter_types == param_types {
-                    return Err(Error::Type(TypeError {
-                        message: format!("Function '{}' with these parameter types is already defined", decl.name),
-                    }));
-                }
-            }
-        }
+        // With unified syntax and multiple dispatch, we allow multiple implementations
+        // with the same parameter types (they may have different guards)
         
         // Set up local environment for checking the method body
         self.locals.clear();
@@ -232,7 +225,7 @@ impl TypeChecker {
                         }
                         Ok(Type::Bool)
                     }
-                    BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
+                    BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide | BinaryOp::Modulo => {
                         if left_type != Type::Int || right_type != Type::Int {
                             return Err(Error::Type(TypeError {
                                 message: format!(

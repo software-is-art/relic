@@ -22,7 +22,7 @@ pub struct ValueDeclaration {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub name: String,
-    pub parameters: Vec<Parameter>,
+    pub parameters: Vec<ParameterWithGuard>,
     pub return_type: Type,
     pub body: Expression,
 }
@@ -89,6 +89,7 @@ pub enum BinaryOp {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
 }
 
 #[derive(Debug, Clone, PartialEq)]

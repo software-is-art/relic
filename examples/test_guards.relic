@@ -1,0 +1,32 @@
+// Test parameter guards in multiple dispatch
+
+// Function with guard on Int parameter
+fn describe(n: Int where n > 0) -> String {
+    "positive"
+}
+
+// More general function without guard
+fn describe(n: Int) -> String {
+    "any"
+}
+
+// Function with guard checking even numbers
+fn parity(n: Int where n % 2 == 0) -> String {
+    "even"
+}
+
+// Function for odd numbers
+fn parity(n: Int where n % 2 == 1) -> String {
+    "odd"
+}
+
+// General fallback
+fn parity(n: Int) -> String {
+    "unknown"
+}
+
+// Test the functions
+describe(5)      // Should return "positive"
+describe(-3)     // Should return "any"
+parity(4)        // Should return "even"
+parity(3)        // Should return "odd"

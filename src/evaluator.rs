@@ -58,6 +58,16 @@ pub fn evaluate_expression(
                         }))
                     }
                 }
+                (BinaryOp::Modulo, EvalValue::Integer(l), EvalValue::Integer(r)) => {
+                    if r != 0 {
+                        Ok(EvalValue::Integer(l % r))
+                    } else {
+                        Err(Error::Validation(ValidationError {
+                            message: "Modulo by zero".to_string(),
+                            value_type: "".to_string(),
+                        }))
+                    }
+                }
                 (BinaryOp::And, EvalValue::Boolean(l), EvalValue::Boolean(r)) => {
                     Ok(EvalValue::Boolean(l && r))
                 }
@@ -163,9 +173,32 @@ pub fn evaluate_expression(
                         });
                         
                     if matches {
-                        // Calculate specificity score for this method
-                        let specificity = calculate_method_specificity(method, &arg_values);
-                        candidates.push((method, specificity));
+                        // Create context for guard evaluation
+                        let mut guard_context = HashMap::new();
+                        for (param, value) in method.parameters.iter().zip(arg_values.iter()) {
+                            guard_context.insert(param.name.clone(), value.clone());
+                        }
+                        
+                        // Check if all guards are satisfied
+                        let guards_satisfied = method.parameters.iter()
+                            .all(|param| {
+                                match &param.guard {
+                                    Some(guard_expr) => {
+                                        // Evaluate the guard expression
+                                        match evaluate_expression(guard_expr, &guard_context, registry) {
+                                            Ok(EvalValue::Boolean(true)) => true,
+                                            _ => false,
+                                        }
+                                    }
+                                    None => true, // No guard means it's satisfied
+                                }
+                            });
+                            
+                        if guards_satisfied {
+                            // Calculate specificity score for this method
+                            let specificity = calculate_method_specificity(method, &arg_values);
+                            candidates.push((method, specificity));
+                        }
                     }
                 }
                 
@@ -383,9 +416,32 @@ fn dispatch_function(
             .all(|(param, value)| matches_type(&param.ty, value));
             
         if matches {
-            // Calculate specificity score for this function
-            let specificity = calculate_function_specificity(func, arg_values);
-            candidates.push((func, specificity));
+            // Create context for guard evaluation
+            let mut guard_context = HashMap::new();
+            for (param, value) in func.parameters.iter().zip(arg_values.iter()) {
+                guard_context.insert(param.name.clone(), value.clone());
+            }
+            
+            // Check if all guards are satisfied
+            let guards_satisfied = func.parameters.iter()
+                .all(|param| {
+                    match &param.guard {
+                        Some(guard_expr) => {
+                            // Evaluate the guard expression
+                            match evaluate_expression(guard_expr, &guard_context, registry) {
+                                Ok(EvalValue::Boolean(true)) => true,
+                                _ => false,
+                            }
+                        }
+                        None => true, // No guard means it's satisfied
+                    }
+                });
+                
+            if guards_satisfied {
+                // Calculate specificity score for this function
+                let specificity = calculate_function_specificity(func, arg_values);
+                candidates.push((func, specificity));
+            }
         }
     }
     
@@ -431,6 +487,11 @@ fn calculate_function_specificity(func: &crate::ast::FunctionDeclaration, arg_va
             crate::types::Type::Any => 1,     // Any is least specific
             crate::types::Type::Unknown => 0,
         };
+        
+        // Add bonus for having a guard (more specific)
+        if param.guard.is_some() {
+            score += 2;
+        }
     }
     
     score
@@ -448,6 +509,11 @@ fn calculate_method_specificity(method: &crate::ast::MethodDeclaration, arg_valu
             crate::types::Type::Any => 1,     // Any is least specific
             crate::types::Type::Unknown => 0,
         };
+        
+        // Add bonus for having a guard (more specific)
+        if param.guard.is_some() {
+            score += 2;
+        }
     }
     
     score

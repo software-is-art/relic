@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - Phase 3 In Progress
 
 ### Summary
-Phase 3 (Multiple Dispatch) is now ~90% complete with unified function syntax and full dispatch implementation.
+Phase 3 (Multiple Dispatch) is now ~95% complete with unified function syntax, full dispatch implementation, and parameter guards working.
 
 ### Added (Phase 3)
 - **Unified Function Syntax**
@@ -36,9 +36,11 @@ Phase 3 (Multiple Dispatch) is now ~90% complete with unified function syntax an
   - Type checker validates no duplicate signatures
   
 - **Implementation Details**
-  - Parameter guards with `where` clauses (parsed, not yet evaluated)
+  - Parameter guards with `where` clauses fully implemented and evaluated
+  - Guards contribute to dispatch specificity (guarded functions are more specific)
   - `Any` type for generic dispatch
   - Member access for value types (partial support)
+  - Modulo operator (`%`) added for common guard patterns
 
 ### Changed
 - **Parser Architecture**
@@ -51,9 +53,10 @@ Phase 3 (Multiple Dispatch) is now ~90% complete with unified function syntax an
   - Automatic dispatch strategy selection
   
 ### To Do (Phase 3 Remaining)
-- Implement parameter guard evaluation in dispatch
+- ~~Implement parameter guard evaluation in dispatch~~ ✅ COMPLETED
 - Add compile-time specialization for performance
 - Complete member access for multi-field value types
+- Update documentation and create migration guide
 
 ## [0.2.0] - 2025-02-10
 
@@ -207,9 +210,25 @@ value CustomerId(id: Int) {
 }
 ```
 
-### Known Limitations (Phase 2)
+### Examples (Phase 3)
+```relic
+// Parameter guards for conditional dispatch
+fn abs(n: Int where n >= 0) -> Int { n }
+fn abs(n: Int where n < 0) -> Int { 0 - n }
+
+// Guards with modulo for even/odd
+fn parity(n: Int where n % 2 == 0) -> String { "even" }
+fn parity(n: Int where n % 2 == 1) -> String { "odd" }
+
+// Multiple dispatch with type precedence
+fn process(x: Int) -> Int { x * 2 }
+fn process(x: Bool) -> Bool { !x }
+fn process(x: Any) -> String { "unknown" }  // Fallback
+```
+
+### Known Limitations
 - Uniqueness constraints parsed but not enforced
-- Multiple dispatch system not yet implemented (Phase 3 in progress)
+- No compile-time specialization (all dispatch is runtime)
 - No relational features yet (Phase 4+)
 - Limited built-in functions
 - No module system

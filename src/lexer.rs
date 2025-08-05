@@ -54,6 +54,7 @@ pub enum Token {
     Minus,
     Star,
     Slash,
+    Percent,  // modulo operator
 
     // Pipeline operator
     Pipeline,
@@ -151,6 +152,10 @@ impl Lexer {
                     } else {
                         Ok(Token::Slash)
                     }
+                }
+                '%' => {
+                    self.advance();
+                    Ok(Token::Percent)
                 }
                 '=' => {
                     self.advance();

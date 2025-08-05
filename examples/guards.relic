@@ -1,0 +1,43 @@
+// Test parameter guards in multiple dispatch
+
+// Define a simple value type
+value PositiveInt(raw: Int) {
+    validate: raw > 0
+}
+
+// Function with guard on Int parameter
+fn describe(n: Int where n > 0) -> String {
+    "positive integer"
+}
+
+// More general function without guard
+fn describe(n: Int) -> String {
+    "integer"
+}
+
+// Function with guard checking even numbers
+fn describe(n: Int where n % 2 == 0) -> String {
+    "even integer"
+}
+
+// Function with multiple parameters and guards
+fn combine(a: Int where a > 0, b: Int where b > 0) -> Int {
+    a + b
+}
+
+// Fallback for any combination
+fn combine(a: Int, b: Int) -> Int {
+    0
+}
+
+// Test function that uses the guards
+fn test_guards() -> String {
+    let r1 = describe(5) in      // Should match first function: "positive integer"
+    let r2 = describe(-3) in     // Should match second function: "integer" 
+    let r3 = describe(4) in      // Should match third function: "even integer"
+    let r4 = describe(0) in      // Should match third function: "even integer"
+    let c1 = combine(3, 4) in    // Should match first combine: 7
+    let c2 = combine(-1, 5) in   // Should match second combine: 0
+    let c3 = combine(2, -2) in   // Should match second combine: 0
+    "Guards working!"
+}

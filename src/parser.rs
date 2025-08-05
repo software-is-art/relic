@@ -44,12 +44,7 @@ impl Parser {
                 let mut parameters = Vec::new();
                 while self.current_token != Token::RightParen {
                     // Support parameter guards for unified syntax
-                    let param_with_guard = self.parse_parameter_with_guard()?;
-                    // For now, convert to regular Parameter (guards will be handled later)
-                    parameters.push(Parameter {
-                        name: param_with_guard.name,
-                        ty: param_with_guard.ty,
-                    });
+                    parameters.push(self.parse_parameter_with_guard()?);
                     if self.current_token == Token::Comma {
                         self.advance()?;
                     } else if self.current_token != Token::RightParen {
@@ -111,12 +106,7 @@ impl Parser {
         let mut parameters = Vec::new();
         while self.current_token != Token::RightParen {
             // Support parameter guards for unified syntax
-            let param_with_guard = self.parse_parameter_with_guard()?;
-            // For now, convert to regular Parameter (guards will be handled later)
-            parameters.push(Parameter {
-                name: param_with_guard.name,
-                ty: param_with_guard.ty,
-            });
+            parameters.push(self.parse_parameter_with_guard()?);
             if self.current_token == Token::Comma {
                 self.advance()?;
             } else if self.current_token != Token::RightParen {
@@ -351,6 +341,7 @@ impl Parser {
             let op = match &self.current_token {
                 Token::Star => BinaryOp::Multiply,
                 Token::Slash => BinaryOp::Divide,
+                Token::Percent => BinaryOp::Modulo,
                 _ => break,
             };
 

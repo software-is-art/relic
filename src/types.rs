@@ -95,7 +95,7 @@ impl TypeEnvironment {
         self.functions.entry(name).or_insert_with(Vec::new).push(function_type);
     }
     
-    pub fn get_methods(&self, name: &str) -> Option<&Vec<MethodSignature>> {
+    pub fn get_methods(&self, _name: &str) -> Option<&Vec<MethodSignature>> {
         // For backward compatibility during transition
         None
     }

@@ -64,17 +64,14 @@ impl ValueRegistry {
         // Convert method to function for unified storage
         let func_decl = FunctionDeclaration {
             name: method_decl.name.clone(),
-            parameters: method_decl.parameters.iter().map(|p| crate::ast::Parameter {
-                name: p.name.clone(),
-                ty: p.ty.clone(),
-            }).collect(),
-            return_type: method_decl.return_type.clone(),
-            body: method_decl.body.clone(),
+            parameters: method_decl.parameters.clone(),
+            return_type: method_decl.return_type,
+            body: method_decl.body,
         };
         self.register_function(func_decl);
     }
     
-    pub fn get_methods(&self, name: &str) -> Option<&Vec<MethodDeclaration>> {
+    pub fn get_methods(&self, _name: &str) -> Option<&Vec<MethodDeclaration>> {
         // For backward compatibility during transition
         None
     }

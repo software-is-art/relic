@@ -1,0 +1,66 @@
+// Parameter Guards in Multiple Dispatch
+// 
+// Relic supports parameter guards using 'where' clauses to add
+// additional constraints beyond type matching. This enables more
+// precise dispatch and cleaner code organization.
+
+// Basic guards with comparison operators
+fn sign(n: Int where n > 0) -> String { "positive" }
+fn sign(n: Int where n < 0) -> String { "negative" }
+fn sign(n: Int where n == 0) -> String { "zero" }
+
+// Guards with modulo operator for even/odd checking
+fn describe_parity(n: Int where n % 2 == 0) -> String {
+    "even number"
+}
+
+fn describe_parity(n: Int where n % 2 == 1) -> String {
+    "odd number"
+}
+
+// Guards with logical operators
+fn categorize(n: Int where n > 0 && n < 10) -> String {
+    "single digit positive"
+}
+
+fn categorize(n: Int where n >= 10 && n < 100) -> String {
+    "double digit"
+}
+
+fn categorize(n: Int where n >= 100) -> String {
+    "triple digit or more"
+}
+
+// Fallback without guard
+fn categorize(n: Int) -> String {
+    "non-positive or zero"
+}
+
+// Guards ensure the most specific function is selected
+// based on both type AND guard conditions. Functions with
+// guards have higher specificity than those without.
+
+// Absolute value using guards
+fn abs(n: Int where n >= 0) -> Int { n }
+fn abs(n: Int where n < 0) -> Int { 0 - n }
+
+// Example with value types and guards
+value Score(points: Int) {
+    validate: points >= 0 && points <= 100
+}
+
+fn grade(s: Score where s.points >= 90) -> String { "A" }
+fn grade(s: Score where s.points >= 80) -> String { "B" }
+fn grade(s: Score where s.points >= 70) -> String { "C" }
+fn grade(s: Score where s.points >= 60) -> String { "D" }
+fn grade(s: Score) -> String { "F" }
+
+// Guards can reference any parameter in scope
+fn safe_divide(a: Int, b: Int where b != 0) -> Int {
+    a / b
+}
+
+// Fallback for division by zero
+fn safe_divide(a: Int, b: Int) -> Int {
+    0  // or could return a Result type when available
+}

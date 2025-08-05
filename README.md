@@ -21,6 +21,9 @@ This initial implementation includes:
 - ✅ Lexer and recursive descent parser
 - ✅ Compiler to generate value constructors from AST
 - ✅ Interactive REPL
+- ✅ Function definitions with multiple dispatch
+- ✅ Uniform Function Call (UFC) syntax
+- ✅ Parameter guards for conditional dispatch
 
 ## Quick Start
 
@@ -86,12 +89,42 @@ Relic currently supports:
 
 - **Logical**: `&&`, `||`, `!`
 - **Comparison**: `==`, `!=`, `<`, `>`, `<=`, `>=`, `contains`
-- **Arithmetic**: `+`, `-`, `*`, `/`
+- **Arithmetic**: `+`, `-`, `*`, `/`, `%`
 - **Member Access**: `object.property`
 - **Method Calls**: `object.method(args)`
 - **Pipeline**: `expr |> expr` - Functional composition
 - **Let-bindings**: `let name = expr in body` - Local bindings
 - **Pattern Matching**: `match expr { Pattern(binding) => result }` - Destructuring
+
+### Functions and Multiple Dispatch
+
+Relic supports multiple dispatch - functions can have multiple implementations selected based on argument types:
+
+```relic
+// Basic function definition
+fn double(x: Int) -> Int {
+    x * 2
+}
+
+// Multiple implementations for different types
+fn describe(x: Int) -> String { "integer" }
+fn describe(x: String) -> String { "string" }
+fn describe(x: Bool) -> String { "boolean" }
+
+// Parameter guards for more specific dispatch
+fn abs(n: Int where n >= 0) -> Int { n }
+fn abs(n: Int where n < 0) -> Int { 0 - n }
+
+// Guards with expressions
+fn classify(n: Int where n % 2 == 0) -> String { "even" }
+fn classify(n: Int where n % 2 == 1) -> String { "odd" }
+```
+
+Functions support:
+- **Type-based dispatch**: Most specific type wins
+- **Parameter guards**: Additional conditions with `where` clauses
+- **Uniform Function Call (UFC)**: `x.f(y)` is sugar for `f(x, y)`
+- **Ambiguity detection**: Compile-time errors for ambiguous calls
 
 ## Examples
 
@@ -99,7 +132,9 @@ See the `examples/` directory for more examples:
 - `email.relic`: Value type definitions
 - `pipeline.relic`: Pipeline operator usage
 - `let_bindings.relic`: Let-binding examples
-- `pattern_matching.relic`: Pattern matching syntax (planned feature)
+- `pattern_matching.relic`: Pattern matching syntax
+- `functions.relic`: Function definitions and dispatch
+- `guard_demo.relic`: Parameter guards in action
 
 ## Architecture
 
