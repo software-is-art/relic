@@ -33,15 +33,17 @@ Relic is an experimental programming language that demonstrates how **parse-don'
 - ✅ Compile-time specialization for performance
 - ✅ Runtime dispatch caching
 
-### Phase 4: Functional-Relational Core ~75% Complete
+### Phase 4: Functional-Relational Core ~85% Complete
 - ✅ **Type-as-Relation Model** (revolutionary design evolution)
 - ✅ Type as first-class values (`Person` → `Type(Person)`)
 - ✅ Minimal built-in approach: only `all(t: Type)` is built-in
-- ✅ List type with essential functional methods
+- ✅ List type with essential functional methods (length implemented)
 - ✅ Persistent instance storage using strong references
 - ✅ Both `all(Person)` and `Person.all()` syntax supported
-- 🚧 Pure Relic standard library functions (count, where, find)
-- 🚧 Field value extraction for better display
+- ✅ Value constructor calls: `User("Alice")` creates instances
+- ✅ Field value extraction: Lists show `[User(Alice), User(Bob)]`
+- ✅ Pure Relic count function: `fn count(t: Type) -> Int { all(t).length() }`
+- 🚧 Lambda support needed for where/find/filter functions
 - 🚧 Join and aggregation operations
 
 ### Phase 5+: Future Work
@@ -231,12 +233,12 @@ Key examples to understand the language:
 ## Current Limitations
 
 1. **Single-parameter value types** - Multi-field values not yet supported
-2. **No string concatenation** - String operations limited
-3. **Basic pattern matching** - Only simple constructor patterns
-4. **Limited built-in functions** - Minimal standard library
-5. **No list/array literals** - Collections not yet implemented (but List type exists)
-6. **Field extraction incomplete** - List display shows empty `{}` for values
-7. **Pure Relic stdlib pending** - count/where/find not yet implemented in Relic
+2. **No lambda expressions** - Blocks implementation of filter/find/where
+3. **No string concatenation** - String operations limited
+4. **Basic pattern matching** - Only simple constructor patterns
+5. **Limited built-in functions** - Minimal standard library
+6. **No list/array literals** - Collections not yet implemented (but List type exists)
+7. **Key/unique constraints** - Not yet validated during value construction
 
 ## Contributing Guidelines
 

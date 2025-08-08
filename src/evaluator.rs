@@ -5,6 +5,7 @@ use crate::value::ValueRegistry;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::Arc;
+use std::any::Any;
 
 // Cache key for dispatch decisions
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -160,9 +161,45 @@ pub fn evaluate_expression(
                     let instances = registry.get_all_instances(type_name);
                     let eval_instances: Vec<EvalValue> = instances
                         .into_iter()
-                        .map(|instance| EvalValue::Value {
-                            type_name: instance.type_name().to_string(),
-                            fields: HashMap::new(), // TODO: Extract actual fields
+                        .map(|instance| {
+                            let mut fields = HashMap::new();
+                            
+                            // Try to extract field value based on the constructor definition
+                            if let Some(constructor) = registry.constructors.get(type_name) {
+                                let param_name = &constructor.declaration.parameter.name;
+                                
+                                // Try to downcast and extract the value
+                                let any_ref = instance.as_any();
+                                if let Some(generic_obj) = any_ref.downcast_ref::<crate::value::GenericValueObject>() {
+                                    // Access the data field directly
+                                    let data_ref = &*generic_obj.data;
+                                    
+                                    // Try to extract based on parameter type
+                                    match &constructor.declaration.parameter.ty {
+                                        crate::types::Type::String => {
+                                            if let Some(s) = data_ref.downcast_ref::<String>() {
+                                                fields.insert(param_name.clone(), EvalValue::String(s.clone()));
+                                            }
+                                        }
+                                        crate::types::Type::Int => {
+                                            if let Some(n) = data_ref.downcast_ref::<i64>() {
+                                                fields.insert(param_name.clone(), EvalValue::Integer(*n));
+                                            }
+                                        }
+                                        crate::types::Type::Bool => {
+                                            if let Some(b) = data_ref.downcast_ref::<bool>() {
+                                                fields.insert(param_name.clone(), EvalValue::Boolean(*b));
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            
+                            EvalValue::Value {
+                                type_name: instance.type_name().to_string(),
+                                fields,
+                            }
                         })
                         .collect();
                     return Ok(EvalValue::List(eval_instances));
@@ -174,8 +211,49 @@ pub fn evaluate_expression(
                 }
             }
             
+            // First check if it's a value constructor
+            if registry.constructors.contains_key(name) {
+                // Handle value construction
+                if arg_values.len() != 1 {
+                    return Err(Error::Validation(ValidationError {
+                        message: format!(
+                            "Value constructor {} expects 1 argument, got {}",
+                            name,
+                            arg_values.len()
+                        ),
+                        value_type: "constructor".to_string(),
+                    }));
+                }
+                
+                // Convert the argument to a form the constructor can use
+                let arg = &arg_values[0];
+                let input: Box<dyn Any + Send + Sync> = match arg {
+                    EvalValue::String(s) => Box::new(s.clone()),
+                    EvalValue::Integer(n) => Box::new(*n),
+                    EvalValue::Boolean(b) => Box::new(*b),
+                    _ => return Err(Error::Validation(ValidationError {
+                        message: format!("Invalid argument type for value constructor {}", name),
+                        value_type: "constructor".to_string(),
+                    })),
+                };
+                
+                // Construct the value
+                let _value_obj = registry.construct(name, input)?;
+                
+                // Extract the field value for the EvalValue
+                let mut fields = HashMap::new();
+                if let Some(constructor) = registry.constructors.get(name) {
+                    let param_name = &constructor.declaration.parameter.name;
+                    fields.insert(param_name.clone(), arg.clone());
+                }
+                
+                Ok(EvalValue::Value {
+                    type_name: name.clone(),
+                    fields,
+                })
+            }
             // With unified syntax, all functions can have multiple implementations
-            if let Some(functions) = registry.get_functions(name) {
+            else if let Some(functions) = registry.get_functions(name) {
                 // If only one function, execute it directly
                 if functions.len() == 1 {
                     let func_decl = &functions[0];
@@ -366,9 +444,45 @@ pub fn evaluate_expression(
                             let instances = registry.get_all_instances(type_name);
                             let eval_instances: Vec<EvalValue> = instances
                                 .into_iter()
-                                .map(|instance| EvalValue::Value {
-                                    type_name: instance.type_name().to_string(),
-                                    fields: HashMap::new(), // TODO: Extract actual fields
+                                .map(|instance| {
+                                    let mut fields = HashMap::new();
+                                    
+                                    // Try to extract field value based on the constructor definition
+                                    if let Some(constructor) = registry.constructors.get(type_name) {
+                                        let param_name = &constructor.declaration.parameter.name;
+                                        
+                                        // Try to downcast and extract the value
+                                        let any_ref = instance.as_any();
+                                        if let Some(generic_obj) = any_ref.downcast_ref::<crate::value::GenericValueObject>() {
+                                            // Access the data field directly
+                                            let data_ref = &*generic_obj.data;
+                                            
+                                            // Try to extract based on parameter type
+                                            match &constructor.declaration.parameter.ty {
+                                                crate::types::Type::String => {
+                                                    if let Some(s) = data_ref.downcast_ref::<String>() {
+                                                        fields.insert(param_name.clone(), EvalValue::String(s.clone()));
+                                                    }
+                                                }
+                                                crate::types::Type::Int => {
+                                                    if let Some(n) = data_ref.downcast_ref::<i64>() {
+                                                        fields.insert(param_name.clone(), EvalValue::Integer(*n));
+                                                    }
+                                                }
+                                                crate::types::Type::Bool => {
+                                                    if let Some(b) = data_ref.downcast_ref::<bool>() {
+                                                        fields.insert(param_name.clone(), EvalValue::Boolean(*b));
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    }
+                                    
+                                    EvalValue::Value {
+                                        type_name: instance.type_name().to_string(),
+                                        fields,
+                                    }
                                 })
                                 .collect();
                             Ok(EvalValue::List(eval_instances))
@@ -407,6 +521,25 @@ pub fn evaluate_expression(
                             }
                             (EvalValue::String(s), "toUpperCase") if args.is_empty() => {
                                 Ok(EvalValue::String(s.to_uppercase()))
+                            }
+                            (EvalValue::List(items), "length") if args.is_empty() => {
+                                Ok(EvalValue::Integer(items.len() as i64))
+                            }
+                            (EvalValue::List(_items), "filter") if args.len() == 1 => {
+                                // For now, filter is not implemented
+                                // We need function values/lambdas for this
+                                Err(Error::Validation(ValidationError {
+                                    message: "List.filter() not yet implemented - requires lambda support".to_string(),
+                                    value_type: "method".to_string(),
+                                }))
+                            }
+                            (EvalValue::List(_items), "find") if args.len() == 1 => {
+                                // For now, find is not implemented
+                                // We need function values/lambdas for this
+                                Err(Error::Validation(ValidationError {
+                                    message: "List.find() not yet implemented - requires lambda support".to_string(),
+                                    value_type: "method".to_string(),
+                                }))
                             }
                             _ => Err(Error::Validation(ValidationError {
                                 message: format!("Unknown method {} or wrong arguments", method),
@@ -453,6 +586,25 @@ pub fn evaluate_expression(
                     }
                     (EvalValue::String(s), "toUpperCase") if args.is_empty() => {
                         Ok(EvalValue::String(s.to_uppercase()))
+                    }
+                    (EvalValue::List(items), "length") if args.is_empty() => {
+                        Ok(EvalValue::Integer(items.len() as i64))
+                    }
+                    (EvalValue::List(_items), "filter") if args.len() == 1 => {
+                        // For now, filter is not implemented
+                        // We need function values/lambdas for this
+                        Err(Error::Validation(ValidationError {
+                            message: "List.filter() not yet implemented - requires lambda support".to_string(),
+                            value_type: "method".to_string(),
+                        }))
+                    }
+                    (EvalValue::List(_items), "find") if args.len() == 1 => {
+                        // For now, find is not implemented
+                        // We need function values/lambdas for this
+                        Err(Error::Validation(ValidationError {
+                            message: "List.find() not yet implemented - requires lambda support".to_string(),
+                            value_type: "method".to_string(),
+                        }))
                     }
                     _ => Err(Error::Validation(ValidationError {
                         message: format!("Unknown method {} or wrong arguments", method),
@@ -718,7 +870,30 @@ impl std::fmt::Display for EvalValue {
             EvalValue::Integer(n) => write!(f, "{}", n),
             EvalValue::Boolean(b) => write!(f, "{}", b),
             EvalValue::Value { type_name, fields } => {
-                write!(f, "{}({:?})", type_name, fields)
+                write!(f, "{}", type_name)?;
+                if !fields.is_empty() {
+                    write!(f, "(")?;
+                    let mut first = true;
+                    // For single-parameter values, just show the value
+                    if fields.len() == 1 {
+                        for (_name, value) in fields {
+                            write!(f, "{}", value)?;
+                        }
+                    } else {
+                        // For multi-parameter values (future), show name=value pairs
+                        for (name, value) in fields {
+                            if !first {
+                                write!(f, ", ")?;
+                            }
+                            write!(f, "{}={}", name, value)?;
+                            first = false;
+                        }
+                    }
+                    write!(f, ")")?;
+                } else {
+                    write!(f, "()")?;
+                }
+                Ok(())
             },
             EvalValue::Type(type_name) => write!(f, "Type({})", type_name),
             EvalValue::List(items) => {

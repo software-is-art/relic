@@ -1,0 +1,6 @@
+// Test value creation and Type-as-Relation
+
+// Define a simple User type
+value User(name: String) {
+    validate: name.length > 0
+}

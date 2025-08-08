@@ -199,6 +199,7 @@ impl Parser {
                     "Int" => Type::Int,
                     "Bool" => Type::Bool,
                     "Any" => Type::Any,
+                    "Type" => Type::Type,
                     _ => Type::Value(name.clone()),
                 };
                 self.advance()?;
@@ -824,88 +825,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_relation_declaration() {
-        let input = "relation Users {
-            id: Int,
-            email: String,
-            age: Int
-            
-            key: id
-            unique: email
-        }";
-        
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer).unwrap();
-        let program = parser.parse_program().unwrap();
-        
-        assert_eq!(program.declarations.len(), 1);
-        match &program.declarations[0] {
-            Declaration::Relation(r) => {
-                assert_eq!(r.name, "Users");
-                assert_eq!(r.fields.len(), 3);
-                
-                // Check fields
-                assert_eq!(r.fields[0].name, "id");
-                assert_eq!(r.fields[0].ty, Type::Int);
-                assert_eq!(r.fields[1].name, "email");
-                assert_eq!(r.fields[1].ty, Type::String);
-                assert_eq!(r.fields[2].name, "age");
-                assert_eq!(r.fields[2].ty, Type::Int);
-                
-                // Check constraints
-                assert_eq!(r.constraints.len(), 2);
-                match &r.constraints[0] {
-                    RelationConstraint::Key(fields) => {
-                        assert_eq!(fields, &vec!["id".to_string()]);
-                    }
-                    _ => panic!("Expected key constraint")
-                }
-                match &r.constraints[1] {
-                    RelationConstraint::Unique(fields) => {
-                        assert_eq!(fields, &vec!["email".to_string()]);
-                    }
-                    _ => panic!("Expected unique constraint")
-                }
-            }
-            _ => panic!("Expected relation declaration")
-        }
-    }
-
-    #[test]
-    fn test_relation_with_foreign_key() {
-        let input = "relation Orders {
-            id: Int,
-            userId: Int,
-            total: Float
-            
-            key: id
-            foreign: userId references Users.id
-        }";
-        
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer).unwrap();
-        let program = parser.parse_program().unwrap();
-        
-        assert_eq!(program.declarations.len(), 1);
-        match &program.declarations[0] {
-            Declaration::Relation(r) => {
-                assert_eq!(r.name, "Orders");
-                assert_eq!(r.fields.len(), 3);
-                assert_eq!(r.constraints.len(), 2);
-                
-                // Check foreign key constraint
-                match &r.constraints[1] {
-                    RelationConstraint::Foreign { field, references_relation, references_field } => {
-                        assert_eq!(field, "userId");
-                        assert_eq!(references_relation, "Users");
-                        assert_eq!(references_field, "id");
-                    }
-                    _ => panic!("Expected foreign key constraint")
-                }
-            }
-            _ => panic!("Expected relation declaration")
-        }
-    }
+    // Relation tests removed - using Type-as-Relation model now
 
 }

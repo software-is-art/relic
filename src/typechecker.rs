@@ -556,6 +556,33 @@ impl TypeChecker {
                         }
                         Ok(Type::String)
                     }
+                    (Type::List(_), "length") => {
+                        if !args.is_empty() {
+                            return Err(Error::Type(TypeError {
+                                message: "length takes no arguments".to_string(),
+                            }));
+                        }
+                        Ok(Type::Int)
+                    }
+                    (Type::List(elem_type), "filter") => {
+                        if args.len() != 1 {
+                            return Err(Error::Type(TypeError {
+                                message: "filter takes exactly one argument".to_string(),
+                            }));
+                        }
+                        // For now, we don't check the predicate function type
+                        Ok(Type::List(elem_type.clone()))
+                    }
+                    (Type::List(elem_type), "find") => {
+                        if args.len() != 1 {
+                            return Err(Error::Type(TypeError {
+                                message: "find takes exactly one argument".to_string(),
+                            }));
+                        }
+                        // For now, we don't check the predicate function type
+                        // find returns the element type directly (not wrapped in Option yet)
+                        Ok((**elem_type).clone())
+                    }
                     _ => Err(Error::Type(TypeError {
                         message: format!("Type {:?} has no method '{}'", object_type, method),
                     })),

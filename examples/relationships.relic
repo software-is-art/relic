@@ -1,0 +1,251 @@
+// Relationships as Values - Example Patterns
+// This demonstrates how to model various relationships using Relic's
+// "everything is a value" philosophy
+
+// Basic entity types
+value Person(id: Int, name: String, email: String) {
+    validate: name.length > 0
+    validate: email contains "@"
+    key: id
+}
+
+value Company(id: Int, name: String, industry: String) {
+    validate: name.length > 0
+    key: id
+}
+
+value Project(id: Int, name: String, startDate: Date) {
+    validate: name.length > 0
+    key: id
+}
+
+// --- Symmetric Relationships ---
+
+// Friendship is bidirectional - normalize to prevent duplicates
+value Friendship(
+    person1: Int,  // PersonId
+    person2: Int,  // PersonId
+    since: Date,
+    strength: Int  // 1-10 scale
+) {
+    validate: person1 != person2
+    validate: strength >= 1 && strength <= 10
+    // Normalize to ensure we don't store both (A,B) and (B,A)
+    normalize: person1 < person2 ? (person1, person2) : (person2, person1)
+    unique: (person1, person2)
+}
+
+// --- Directed Relationships ---
+
+// Employment has clear direction: employee → employer
+value Employment(
+    personId: Int,     // PersonId
+    companyId: Int,    // CompanyId  
+    role: String,
+    startDate: Date,
+    endDate: Option[Date],
+    salary: Float
+) {
+    validate: role.length > 0
+    validate: salary > 0
+    validate: endDate.map(end => end > startDate).getOrElse(true)
+    // A person can only have one current employment
+    unique: personId where endDate == None
+}
+
+// Management hierarchy
+value ReportsTo(
+    employeeId: Int,  // PersonId
+    managerId: Int,   // PersonId
+    effectiveDate: Date
+) {
+    validate: employeeId != managerId
+    // Each employee has at most one current manager
+    key: employeeId
+}
+
+// --- N-ary Relationships ---
+
+// Project assignments involve person, project, and role
+value ProjectAssignment(
+    projectId: Int,    // ProjectId
+    personId: Int,     // PersonId
+    role: String,      // "Developer", "Designer", "Manager", etc.
+    allocation: Int,   // Percentage 0-100
+    startDate: Date,
+    endDate: Option[Date]
+) {
+    validate: allocation > 0 && allocation <= 100
+    validate: role in ["Developer", "Designer", "Manager", "Analyst"]
+    // Can't have same person in same role on same project
+    unique: (projectId, personId, role)
+}
+
+// --- Relationship Query Functions ---
+
+// Find all friendships involving a person
+fn friendshipsOf(personId: Int) -> List[Friendship] {
+    Friendship.where(f => 
+        f.person1 == personId || f.person2 == personId
+    )
+}
+
+// Find all friends of a person
+fn friendsOf(personId: Int) -> List[Person] {
+    friendshipsOf(personId)
+        .map(f => f.person1 == personId ? f.person2 : f.person1)
+        .map(id => Person.find(p => p.id == id))
+}
+
+// Find mutual friends between two people
+fn mutualFriends(person1Id: Int, person2Id: Int) -> List[Person] {
+    let friends1 = friendsOf(person1Id).map(p => p.id)
+    let friends2 = friendsOf(person2Id).map(p => p.id)
+    
+    friends1.filter(id => friends2.contains(id))
+        .map(id => Person.find(p => p.id == id))
+}
+
+// Find current employer of a person
+fn currentEmployer(personId: Int) -> Option[Company] {
+    Employment.find(e => 
+        e.personId == personId && e.endDate == None
+    ).map(e => 
+        Company.find(c => c.id == e.companyId)
+    )
+}
+
+// Find all employees of a company
+fn employeesOf(companyId: Int) -> List[Person] {
+    Employment.where(e => 
+        e.companyId == companyId && e.endDate == None
+    ).map(e => 
+        Person.find(p => p.id == e.personId)
+    )
+}
+
+// Find reporting chain (all managers up to CEO)
+fn reportingChain(personId: Int) -> List[Person] {
+    ReportsTo.find(r => r.employeeId == personId)
+        .map(r => {
+            let manager = Person.find(p => p.id == r.managerId)
+            [manager] ++ reportingChain(r.managerId)
+        })
+        .getOrElse([])
+}
+
+// Find all direct reports
+fn directReports(managerId: Int) -> List[Person] {
+    ReportsTo.where(r => r.managerId == managerId)
+        .map(r => Person.find(p => p.id == r.employeeId))
+}
+
+// Find team members on a project
+fn projectTeam(projectId: Int) -> List[(Person, String, Int)] {
+    ProjectAssignment.where(a => 
+        a.projectId == projectId && a.endDate == None
+    ).map(a => 
+        (Person.find(p => p.id == a.personId), a.role, a.allocation)
+    )
+}
+
+// --- Complex Graph Queries ---
+
+// Friends of friends (2nd degree connections)
+fn friendsOfFriends(personId: Int) -> List[Person] {
+    let directFriends = friendsOf(personId).map(p => p.id)
+    
+    directFriends
+        .flatMap(friendId => friendsOf(friendId))
+        .filter(p => p.id != personId && !directFriends.contains(p.id))
+        .distinctBy(p => p.id)
+}
+
+// Find shortest path between two people (degrees of separation)
+fn degreesOfSeparation(person1Id: Int, person2Id: Int) -> Option[Int] {
+    if person1Id == person2Id then Some(0)
+    else {
+        let visited = Set[Int]()
+        let queue = [(person1Id, 0)]
+        
+        // Breadth-first search
+        while !queue.isEmpty() {
+            let (currentId, distance) = queue.head()
+            queue = queue.tail()
+            
+            if currentId == person2Id then
+                return Some(distance)
+            
+            if !visited.contains(currentId) {
+                visited = visited.add(currentId)
+                let friends = friendsOf(currentId).map(p => p.id)
+                queue = queue ++ friends.map(id => (id, distance + 1))
+            }
+        }
+        
+        None  // No path found
+    }
+}
+
+// Find colleagues (people who work at same company)
+fn colleagues(personId: Int) -> List[Person] {
+    currentEmployer(personId)
+        .map(company => employeesOf(company.id))
+        .getOrElse([])
+        .filter(p => p.id != personId)
+}
+
+// Find people with most friends (social hubs)
+fn socialHubs(limit: Int) -> List[(Person, Int)] {
+    Person.all()
+        .map(p => (p, friendsOf(p.id).length()))
+        .sortBy(pair => -pair.1)  // Sort by friend count descending
+        .take(limit)
+}
+
+// --- Temporal Queries ---
+
+// Employment history
+fn employmentHistory(personId: Int) -> List[Employment] {
+    Employment.where(e => e.personId == personId)
+        .sortBy(e => e.startDate)
+}
+
+// Find colleagues from past companies
+fn formerColleagues(personId: Int) -> List[Person] {
+    employmentHistory(personId)
+        .filter(e => e.endDate != None)  // Past employments
+        .flatMap(employment => 
+            Employment.where(e => 
+                e.companyId == employment.companyId &&
+                e.personId != personId &&
+                // Overlapping time periods
+                e.startDate < employment.endDate.get() &&
+                e.endDate.map(end => end > employment.startDate).getOrElse(true)
+            ).map(e => Person.find(p => p.id == e.personId))
+        )
+        .distinctBy(p => p.id)
+}
+
+// --- Usage Examples ---
+
+// Create some people
+let alice = Person(1, "Alice", "alice@example.com")
+let bob = Person(2, "Bob", "bob@example.com")
+let charlie = Person(3, "Charlie", "charlie@example.com")
+
+// Create friendships
+let friendship1 = Friendship(alice.id, bob.id, Date.today(), 8)
+let friendship2 = Friendship(bob.id, charlie.id, Date.today(), 7)
+
+// Query relationships
+let alicesFriends = friendsOf(alice.id)  // [Bob]
+let mutual = mutualFriends(alice.id, charlie.id)  // [Bob]
+let bobsNetwork = friendsOfFriends(bob.id)  // [Charlie] (Alice is direct friend)
+
+// The power of this approach:
+// 1. All relationships are explicit and queryable
+// 2. Relationships can carry rich attributes (strength, dates, etc.)
+// 3. Temporal aspects are naturally supported
+// 4. Complex graph algorithms are just functions
+// 5. Everything composes with Relic's standard library

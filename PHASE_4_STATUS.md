@@ -11,7 +11,7 @@ We've evolved from explicit relations to a model where:
 - Aligns perfectly with the sea of nodes compiler architecture
 
 ## Summary
-Phase 4 is **~75% complete** - We've successfully implemented the minimal built-in approach with Type as a first-class type, the `all(t: Type) -> List[t]` built-in function, and persistent instance storage.
+Phase 4 is **~85% complete** - We've successfully implemented the minimal built-in approach with Type as a first-class type, the `all(t: Type) -> List[t]` built-in function, persistent instance storage, value construction, field extraction, and the pure Relic `count()` function.
 
 ### Design Evolution Timeline
 1. ✅ **First approach**: Special `relation` syntax with code generation
@@ -68,8 +68,11 @@ let count = User.count()                     // count(User) -> all(User).length(
 - [x] Implement `all(t: Type) -> List[t]` as the ONLY built-in
 - [x] Create minimal List type with essential methods
 - [x] Keep special-case type method handling for better UX (delegates to built-in)
-- [ ] Implement other functions in pure Relic:
-  - `count(t: Type) -> Int { all(t).length() }`
+- [x] Implement value constructor calls (e.g., `User("Alice")`)
+- [x] Implement field value extraction for proper display
+- [x] Implement List.length() method
+- [x] Implement count() in pure Relic: `count(t: Type) -> Int { all(t).length() }`
+- [ ] Implement other functions in pure Relic (requires lambda support):
   - `where(t: Type, pred) -> List[t] { all(t).filter(pred) }`
   - `find(t: Type, pred) -> Option[t] { all(t).find(pred) }`
 
@@ -189,12 +192,16 @@ value User(id: Int, name: String) {
 3. **Persistent Storage**: All instances stored indefinitely using strong references
 4. **Count Method**: `Person.count()` returns the correct number of instances
 5. **Type Checking**: Proper type inference for Type values and List types
+6. **Value Construction**: Function call syntax creates values (e.g., `User("Alice")`)
+7. **Field Extraction**: List display shows actual field values (e.g., `[User(Alice), User(Bob)]`)
+8. **List Methods**: `List.length()` method works for all lists
+9. **Pure Relic Functions**: `count(t: Type)` implemented in pure Relic
 
 ### Known Limitations
 - No persistence between REPL sessions (in-memory only)
-- Field values not extracted in List display (shows empty `{}`)
-- Pure Relic standard library functions not yet implemented
+- Lambda/function values not yet supported (blocks `filter`, `find`, `where`)
 - Key and unique constraints not yet validated
+- Multi-parameter value types not yet supported
 
 ## Relational Completeness
 
@@ -260,11 +267,13 @@ See [RELATIONAL_POWER.md](RELATIONAL_POWER.md) for complete relational algebra m
 
 Phase 4 will be considered complete when:
 1. ✅ Value types automatically maintain relations of their instances
-2. ✅ Built-in `all(t: Type)` implemented, others pending as pure Relic functions
+2. ✅ Built-in `all(t: Type)` implemented with count() in pure Relic
 3. ✅ All relational algebra operations expressible (documented in RELATIONAL_POWER.md)
 4. ✅ Memory management is configurable (currently using Arc for persistence)
-5. 🔶 All tests pass (need more tests)
-6. ✅ Documentation captures the "no queries" breakthrough
+5. ✅ Value construction and field extraction working
+6. 🔶 Lambda support for where/find/filter functions
+7. 🔶 All tests pass (need more tests)
+8. ✅ Documentation captures the "no queries" breakthrough
 
 ## Technical Challenges
 

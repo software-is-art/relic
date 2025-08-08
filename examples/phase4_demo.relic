@@ -1,0 +1,16 @@
+// Phase 4 Demo: Type-as-Relation with Field Extraction
+// This demonstrates the functional-relational features implemented so far
+
+// Define some value types
+value User(name: String) {
+    validate: name.length > 0
+}
+
+value Product(name: String) {
+    validate: name.length > 0
+}
+
+// Define a count function using pure Relic
+fn count(t: Type) -> Int {
+    all(t).length()
+}

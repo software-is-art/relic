@@ -7,7 +7,8 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 ✅ **Phase 1 COMPLETED**: Core value object foundation with parse-don't-validate semantics
 ✅ **Phase 2 COMPLETED**: Parser, lexer, and basic language features (100% complete)
 ✅ **Phase 3 COMPLETED**: Multiple dispatch system (100% complete)
-🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~75% complete) - Minimal built-in approach implemented!
+🔲 **Phase 3.5 HIGH PRIORITY**: Multi-field value types - Essential for real-world usage
+🚧 **Phase 4 IN PROGRESS**: Functional-Relational Core (~85% complete) - Type-as-Relation with value construction and field extraction!
 🔲 **Phases 5-10**: Future work
 
 ### What's Working Now
@@ -36,9 +37,12 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - ✅ ValueRegistry tracks instances using Arc references for persistent storage
 - ✅ **Minimal Built-in Approach**: Only `all(t: Type)` is built-in
 - ✅ Type as first-class value: `Person` evaluates to `Type(Person)`
-- ✅ List type with essential functional methods (map, filter, find, etc.)
+- ✅ List type with essential functional methods (length, future: filter, find, etc.)
 - ✅ Both function call `all(Person)` and method call `Person.all()` syntax supported
 - ✅ Count method working: `Person.count()` returns number of instances
+- ✅ **Value constructor calls**: `User("Alice")` creates value instances
+- ✅ **Field value extraction**: Lists display actual values `[User(Alice), User(Bob)]`
+- ✅ **Pure Relic standard library**: `count(t: Type)` function implemented
 - ✅ Perfect alignment with functional programming and sea of nodes architecture
 - ✅ Updated design documents (PHASE_4_STATUS.md, RELATIONS_AS_VALUES.md, DESIGN.md)
 
@@ -54,7 +58,7 @@ This document outlines the implementation roadmap for Relic, a value-oriented pr
 - ✅ Multi-line comments with nesting
 
 ### Progress Summary
-Phase 2 is **100% complete** and Phase 3 is **~98% complete**!
+Phase 2 is **100% complete**, Phase 3 is **100% complete**, and Phase 4 is **~85% complete**!
 
 **Phase 2 Features (Complete):**
 - Value types with validation predicates ✅
@@ -202,7 +206,45 @@ Based on Julia and CLOS research:
 - [ ] Create specialized implementations per type combination
 - [ ] Build performance profiling for dispatch overhead
 
-## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~75% COMPLETE
+## Phase 3.5: Multi-field Value Types (High Priority Enhancement) 🔲 NOT STARTED
+
+### Current Limitation
+- Only single-parameter value types are currently supported
+- Multi-field values are essential for real-world modeling
+
+### Implementation Tasks
+- [ ] Extend AST to support multiple parameters in ValueDeclaration
+  - Change `parameter: Parameter` to `parameters: Vec<Parameter>`
+- [ ] Update parser to handle comma-separated parameters
+  - Modify `parse_value_declaration` to parse multiple parameters
+- [ ] Extend value object system to handle multiple fields
+  - Update `ValueObject` trait and implementations
+  - Implement field access methods
+- [ ] Update type checker for multi-field validation
+  - Ensure validation predicates can reference all fields
+  - Support field access in expressions (e.g., `person.name`)
+- [ ] Add support for field extraction in evaluator
+  - Enable accessing individual fields of value objects
+  - Fix display of value objects to show field values
+- [ ] Update examples and tests for multi-field values
+
+### Example Syntax
+```relic
+value Person(name: String, age: Int) {
+    validate: age >= 0 && age <= 150 && name.length > 0
+}
+
+value Point(x: Int, y: Int) {
+    normalize: Point(x.abs(), y.abs())
+}
+
+value Email(local: String, domain: String) {
+    validate: local.length > 0 && domain contains "."
+    normalize: Email(local.toLowerCase(), domain.toLowerCase())
+}
+```
+
+## Phase 4: Functional-Relational Core (Weeks 13-16) 🚧 ~85% COMPLETE
 
 ### 4.1 Type-as-Relation Architecture ✅ REVOLUTIONARY APPROACH
 Every value type implicitly forms a relation of its instances:
@@ -227,8 +269,11 @@ Every value type implicitly forms a relation of its instances:
 - [x] Implement `all(t: Type) -> List[t]` as the single built-in
 - [x] Create minimal List type with essential methods
 - [x] Keep special-case type method handling for better UX (delegates to built-in)
-- [ ] Implement standard library functions in pure Relic:
-  - `count(t: Type) -> Int { all(t).length() }`
+- [x] Implement value constructor calls (e.g., `User("Alice")`)
+- [x] Implement field value extraction for proper display
+- [x] Implement List.length() method
+- [x] Implement count() in pure Relic: `count(t: Type) -> Int { all(t).length() }`
+- [ ] Implement other functions in pure Relic (requires lambda support):
   - `where(t: Type, pred) -> List[t] { all(t).filter(pred) }`
   - `find(t: Type, pred) -> Option[t] { all(t).find(pred) }`
 - [x] UFC syntax naturally handles type methods:
@@ -246,7 +291,14 @@ Every value type implicitly forms a relation of its instances:
   let all = User.all()
   ```
 
-### 4.4 Advanced Query Operations
+### 4.4 Lambda/Function Values (Required for completion)
+- [ ] Lambda expression syntax: `x => x + 1`
+- [ ] Function values as first-class citizens
+- [ ] Type inference for lambda parameters
+- [ ] Closure support for captured variables
+- [ ] Enable filter/find/where implementations
+
+### 4.5 Advanced Query Operations
 - [ ] Cross-type joins
 - [ ] Aggregation functions (sum, avg, min, max)
 - [ ] Group by operations
@@ -499,6 +551,14 @@ This architecture will enable Relic to achieve near-zero overhead abstractions w
 - Migration cost → Incremental adoption path
 
 ## Immediate Next Steps
+
+### Phase 3.5: Multi-field Value Types (HIGH PRIORITY)
+This is a critical enhancement that blocks many real-world use cases:
+1. **AST Changes**: Extend ValueDeclaration to support Vec<Parameter>
+2. **Parser Updates**: Handle comma-separated parameters in value declarations
+3. **Type System**: Support field access and multi-field validation
+4. **Value Objects**: Implement multi-field storage and access
+5. **Examples**: Create comprehensive multi-field examples
 
 ### Phase 2 Complete! ✅
 1. ✅ **Pipeline Operator**: COMPLETED - Functional composition with `|>`

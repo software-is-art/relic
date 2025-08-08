@@ -157,9 +157,9 @@ impl ValueRegistry {
 }
 
 #[derive(Debug)]
-struct GenericValueObject {
-    type_name: String,
-    data: Box<dyn Any + Send + Sync>,
+pub struct GenericValueObject {
+    pub type_name: String,
+    pub data: Box<dyn Any + Send + Sync>,
 }
 
 impl Display for GenericValueObject {

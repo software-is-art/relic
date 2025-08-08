@@ -1,0 +1,20 @@
+// Relic Standard Library Functions
+// Built on top of the minimal built-in: all(t: Type) -> List[t]
+
+// Count the number of instances of a type
+fn count(t: Type) -> Int {
+    all(t).length()
+}
+
+// Future implementations (when lambda support is added):
+// fn where(t: Type, pred: fn(t) -> Bool) -> List[t] {
+//     all(t).filter(pred)
+// }
+//
+// fn find(t: Type, pred: fn(t) -> Bool) -> Option[t] {
+//     all(t).find(pred)
+// }
+//
+// fn exists(t: Type, pred: fn(t) -> Bool) -> Bool {
+//     all(t).any(pred)
+// }
